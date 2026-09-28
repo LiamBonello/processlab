@@ -1,9 +1,12 @@
-export interface ProcessTask {
+export type ProcessStepKind = 'start' | 'task' | 'decision' | 'end';
+
+export interface ProcessStep {
   id: string;
   label: string;
-  durationMinutes: number;
-  workers: number;
-  hourlyCost: number;
+  kind: ProcessStepKind;
+  durationMinutes?: number;
+  workers?: number;
+  hourlyCost?: number;
 }
 
 export interface ProcessConnection {
