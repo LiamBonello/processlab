@@ -79,14 +79,14 @@ describe('simulateProcess', () => {
         [
           { id: 'start', label: 'Start', kind: 'start' },
           { id: 'a', label: 'A', kind: 'task', durationMinutes: 1, workers: 1, hourlyCost: 1 },
-          { id: 'b', label: 'B', kind: 'task', durationMinutes: 1, workers: 1, hourlyCost: 1 },
+          { id: 'b', label: 'B?', kind: 'decision' },
           { id: 'end', label: 'End', kind: 'end' },
         ],
         [
           { source: 'start', target: 'a' },
           { source: 'a', target: 'b' },
-          { source: 'b', target: 'a' },
-          { source: 'b', target: 'end' },
+          { source: 'b', target: 'a', probability: 0.5 },
+          { source: 'b', target: 'end', probability: 0.5 },
         ],
         { monthlyVolume: 100, workdaysPerMonth: 20, hoursPerDay: 8 },
       ),
