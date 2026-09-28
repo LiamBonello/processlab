@@ -1124,11 +1124,26 @@ export function ProcessBuilder() {
                 <Button
                   size="small"
                   variant="outlined"
-                  startIcon={<ReplayRoundedIcon />}
-                  onClick={replaySimulation}
-                  disabled={isAnimating}
+                  startIcon={
+                    playbackStatus === 'playing'
+                      ? <PauseRoundedIcon />
+                      : <PlayArrowRoundedIcon />
+                  }
+                  onClick={togglePlayback}
                 >
-                  {isAnimating ? 'Playing' : 'Replay flow'}
+                  {playbackStatus === 'playing'
+                    ? 'Pause replay'
+                    : playbackStatus === 'finished'
+                      ? 'Play again'
+                      : 'Play replay'}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<RestartAltRoundedIcon />}
+                  onClick={restartPlayback}
+                >
+                  Restart
                 </Button>
                 <Button
                   size="small"
@@ -1140,6 +1155,67 @@ export function ProcessBuilder() {
                 </Button>
               </Stack>
             </Stack>
+
+            <Box
+              sx={(theme) => ({
+                mt: 2,
+                p: 1.5,
+                borderRadius: 2,
+                bgcolor: alpha(theme.palette.common.white, 0.025),
+                border: '1px solid',
+                borderColor: alpha(theme.palette.common.white, 0.07),
+              })}
+            >
+              <Stack
+                direction={{ xs: 'column', md: 'row' }}
+                alignItems={{ xs: 'stretch', md: 'center' }}
+                justifyContent="space-between"
+                gap={1.25}
+              >
+                <Box>
+                  <Typography variant="subtitle2">Sampled transaction replay</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {result.trace.sampledTransactionIds.length} transactions · {formatPlaybackTime(playbackTime, hoursPerDay)}
+                  </Typography>
+                </Box>
+
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <Typography variant="caption" color="text.secondary">
+                    Speed
+                  </Typography>
+                  <ButtonGroup size="small" variant="outlined" aria-label="Replay speed">
+                    {[0.5, 1, 2, 4].map((speed) => (
+                      <Button
+                        key={speed}
+                        variant={playbackSpeed === speed ? 'contained' : 'outlined'}
+                        onClick={() => setPlaybackSpeed(speed)}
+                      >
+                        {speed}×
+                      </Button>
+                    ))}
+                  </ButtonGroup>
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={
+                      playbackStatus === 'finished'
+                        ? 'Finished'
+                        : playbackStatus === 'paused'
+                          ? 'Paused'
+                          : playbackStatus === 'playing'
+                            ? 'Playing'
+                            : 'Ready'
+                    }
+                  />
+                </Stack>
+              </Stack>
+
+              <LinearProgress
+                variant="determinate"
+                value={playbackProgress * 100}
+                sx={{ mt: 1.25, height: 6, borderRadius: 999 }}
+              />
+            </Box>
 
             <Divider sx={{ my: 2 }} />
 
