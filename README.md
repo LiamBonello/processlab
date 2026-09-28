@@ -25,7 +25,11 @@ The core product is intentionally independent of third-party business data and A
 - Weighted routing through decision branches
 - Bottleneck detection and canvas highlighting
 - Backlog detection when workload exceeds monthly capacity
-- Animated connections when a simulation runs
+- Animated transaction particles when a simulation runs
+- Per-route simulated visit counts displayed directly on the graph
+- Per-task load, visit and average queue metrics displayed on nodes
+- Minimum fit zoom so larger workflows remain readable
+- Distinguishes a true bottleneck/capacity warning from merely the highest-loaded step
 - Baseline saving and What If scenario comparison
 - Unit tests for workflow validation and simulation behaviour
 
@@ -69,7 +73,7 @@ src/
 
 The simulation engine has no dependency on React, Next.js, Material UI or React Flow. UI graph data is mapped into engine types at the feature boundary so that simulation logic remains portable and testable.
 
-## Simulation assumptions in v0.2
+## Simulation assumptions in v0.3
 
 - A workflow must contain exactly one Start step and at least one End step.
 - Every non-End step must lead somewhere and every non-Start step must be connected into the process.
