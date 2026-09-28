@@ -324,11 +324,32 @@ export function ProcessBuilder() {
     (patch: Partial<ProcessFlowNode['data']>) => {
       if (!selectedNodeId) return;
       setNodes((currentNodes) =>
-        currentNodes.map((node) =>
-          node.id === selectedNodeId
-            ? { ...node, data: { ...node.data, ...patch, isBottleneck: false } }
-            : node,
-        ),
+        currentNodes.map((node) => {
+          if (node.id === selectedNodeId) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                ...patch,
+                isBottleneck: false,
+                simulation: undefined,
+              },
+            };
+          }
+
+          if (node.data.isBottleneck || node.data.simulation) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                isBottleneck: false,
+                simulation: undefined,
+              },
+            };
+          }
+
+          return node;
+        }),
       );
       setResult(null);
       setSimulationError(null);
@@ -701,11 +722,15 @@ export function ProcessBuilder() {
               edgeTypes={edgeTypes}
               onNodesChange={(changes) => {
                 onNodesChange(changes);
-                setResult(null);
+                if (changes.some((change) => change.type === 'remove')) {
+                  clearResult();
+                }
               }}
               onEdgesChange={(changes) => {
                 onEdgesChange(changes);
-                setResult(null);
+                if (changes.some((change) => change.type === 'remove')) {
+                  clearResult();
+                }
               }}
               onConnect={onConnect}
               onNodeClick={(_, node) => {
@@ -1016,7 +1041,8 @@ export function ProcessBuilder() {
                     py: 1.2,
                     borderRadius: 1.5,
                     bgcolor:
-                      metric.taskId === result.bottleneckTaskId
+                      metric.taskId === result.bottleneckTaskId &&
+                      metric.workloadRatio >= 0.8
                         ? alpha(theme.palette.warning.main, 0.08)
                         : alpha(theme.palette.common.white, 0.025),
                   })}
