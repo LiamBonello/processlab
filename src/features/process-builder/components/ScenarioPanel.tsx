@@ -47,7 +47,7 @@ export function ScenarioPanel({
   if (scenarios.length === 0) return null;
 
   return (
-    <Paper variant="outlined" sx={{ p: 2 }}>
+    <Paper className="processlab-print-section" variant="outlined" sx={{ p: 2 }}>
       <Box>
         <Typography variant="h6">Saved scenarios</Typography>
         <Typography variant="body2" color="text.secondary">
@@ -142,7 +142,7 @@ export function ScenarioPanel({
               </Typography>
             </Box>
 
-            <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
+            <Stack className="processlab-report-controls" direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
               <Button
                 size="small"
                 startIcon={<FlagRoundedIcon />}
