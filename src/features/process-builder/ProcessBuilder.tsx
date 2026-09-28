@@ -1129,17 +1129,55 @@ export function ProcessBuilder() {
           gap={1.5}
         >
           <Box>
-            <Stack direction="row" alignItems="center" spacing={1}>
+            <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
               <ScienceRoundedIcon color="primary" />
               <Typography variant="h4">ProcessLab</Typography>
-              <Chip size="small" label="v0.4" variant="outlined" />
+              <Chip size="small" label="V1" variant="outlined" />
+              <Chip
+                size="small"
+                color={workspaceReady ? 'success' : 'default'}
+                variant="outlined"
+                label={workspaceReady ? 'Autosaved locally' : 'Loading workspace'}
+              />
             </Stack>
-            <Typography color="text.secondary" mt={0.5}>
-              Build the process, run the numbers, find the bottleneck.
-            </Typography>
+            <TextField
+              value={projectName}
+              onChange={(event) => setProjectName(event.target.value)}
+              variant="standard"
+              label="Project name"
+              sx={{ mt: 1, minWidth: 280 }}
+            />
           </Box>
 
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <Button
+              startIcon={<AddRoundedIcon />}
+              variant="outlined"
+              onClick={() => applyTemplate(blankProcessTemplate)}
+            >
+              New
+            </Button>
+            <Button
+              startIcon={<FolderOpenRoundedIcon />}
+              variant="outlined"
+              onClick={() => setTemplateDialogOpen(true)}
+            >
+              Templates
+            </Button>
+            <Button
+              startIcon={<UploadFileRoundedIcon />}
+              variant="outlined"
+              onClick={() => importInputRef.current?.click()}
+            >
+              Import
+            </Button>
+            <Button
+              startIcon={<FileDownloadRoundedIcon />}
+              variant="outlined"
+              onClick={exportWorkspace}
+            >
+              Export
+            </Button>
             <Button startIcon={<AddRoundedIcon />} variant="outlined" onClick={insertTask}>
               Insert task
             </Button>
@@ -1149,6 +1187,13 @@ export function ProcessBuilder() {
             <Button startIcon={<BoltRoundedIcon />} variant="contained" onClick={runSimulation}>
               Run simulation
             </Button>
+            <input
+              ref={importInputRef}
+              hidden
+              type="file"
+              accept=".json,.processlab.json,application/json"
+              onChange={importWorkspace}
+            />
           </Stack>
         </Stack>
 
@@ -1440,7 +1485,34 @@ export function ProcessBuilder() {
                   startIcon={<SaveRoundedIcon />}
                   onClick={() => setBaseline(result)}
                 >
-                  {baseline ? 'Replace baseline' : 'Save baseline'}
+                  {baseline ? 'Replace baseline' : 'Quick baseline'}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<SaveRoundedIcon />}
+                  onClick={() => {
+                    setScenarioName('Scenario ' + (savedScenarios.length + 1));
+                    setScenarioDialogOpen(true);
+                  }}
+                >
+                  Save scenario
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<SpeedRoundedIcon />}
+                  onClick={runStressTest}
+                >
+                  Stress test
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<PrintRoundedIcon />}
+                  onClick={printReport}
+                >
+                  Print report
                 </Button>
               </Stack>
             </Stack>
