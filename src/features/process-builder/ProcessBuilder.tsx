@@ -191,39 +191,43 @@ export function ProcessBuilder() {
     const stored = localStorage.getItem(WORKSPACE_STORAGE_KEY);
     const workspace = stored ? parseWorkspace(stored) : null;
 
-    if (workspace) {
-      setProjectName(workspace.projectName);
-      setNodes(
-        workspace.nodes.map((node) => ({
-          ...node,
-          type: 'process' as const,
-          data: {
-            ...node.data,
-            variabilityPercent: node.data.variabilityPercent ?? 0,
-            isBottleneck: false,
-            simulation: undefined,
-            playback: undefined,
-          },
-        })),
-      );
-      setEdges(
-        workspace.edges.map((edge) => ({
-          ...edge,
-          type: 'simulation' as const,
-          data: {
-            probability: edge.data?.probability,
-          },
-        })),
-      );
-      setMonthlyVolume(workspace.monthlyVolume);
-      setWorkdaysPerMonth(workspace.workdaysPerMonth);
-      setHoursPerDay(workspace.hoursPerDay);
-      setSavedScenarios(workspace.savedScenarios);
-      setSelectedNodeId(null);
-      setSelectedEdgeId(null);
-    }
+    const hydrationFrame = window.requestAnimationFrame(() => {
+      if (workspace) {
+        setProjectName(workspace.projectName);
+        setNodes(
+          workspace.nodes.map((node) => ({
+            ...node,
+            type: 'process' as const,
+            data: {
+              ...node.data,
+              variabilityPercent: node.data.variabilityPercent ?? 0,
+              isBottleneck: false,
+              simulation: undefined,
+              playback: undefined,
+            },
+          })),
+        );
+        setEdges(
+          workspace.edges.map((edge) => ({
+            ...edge,
+            type: 'simulation' as const,
+            data: {
+              probability: edge.data?.probability,
+            },
+          })),
+        );
+        setMonthlyVolume(workspace.monthlyVolume);
+        setWorkdaysPerMonth(workspace.workdaysPerMonth);
+        setHoursPerDay(workspace.hoursPerDay);
+        setSavedScenarios(workspace.savedScenarios);
+        setSelectedNodeId(null);
+        setSelectedEdgeId(null);
+      }
 
-    setWorkspaceReady(true);
+      setWorkspaceReady(true);
+    });
+
+    return () => window.cancelAnimationFrame(hydrationFrame);
   }, [setEdges, setNodes]);
 
   useEffect(() => {
