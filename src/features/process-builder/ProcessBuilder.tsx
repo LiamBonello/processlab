@@ -72,6 +72,7 @@ import {
   type ScenarioSnapshot,
 } from './workspace';
 import { buildSimulationInsights } from '@/features/simulation/analysis';
+import { formatSimulationDuration } from '@/features/simulation/format';
 import { simulateProcess } from '@/features/simulation/engine/simulate';
 import type {
   ProcessConnection,
@@ -111,12 +112,6 @@ function formatPlaybackTime(minutes: number, hoursPerDay: number) {
   return `Day ${day} · +${hours}h ${remainingMinutes.toString().padStart(2, '0')}m`;
 }
 
-function formatDuration(minutes: number) {
-  if (minutes < 60) return `${minutes.toFixed(1)} min`;
-  const hours = minutes / 60;
-  if (hours < 24) return `${hours.toFixed(1)} hrs`;
-  return `${(hours / 24).toFixed(1)} days`;
-}
 
 function MetricCard({ label, value, detail }: { label: string; value: string; detail?: string }) {
   return (
@@ -1461,9 +1456,18 @@ export function ProcessBuilder() {
                 <Typography variant="body2" color="text.secondary">
                   {result.transactions.toLocaleString()} transactions across {result.taskMetrics.length} working tasks
                 </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {monthlyVolume.toLocaleString()} transactions/month · {workdaysPerMonth} workdays · {hoursPerDay} hours/day
+                </Typography>
               </Box>
 
-              <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
+              <Stack
+                className="processlab-report-controls"
+                direction="row"
+                spacing={1}
+                useFlexGap
+                sx={{ flexWrap: 'wrap' }}
+              >
                 {constraintLabel ? (
                   <Chip
                     color={constraintColor}
@@ -1534,6 +1538,7 @@ export function ProcessBuilder() {
             </Stack>
 
             <Box
+              className="processlab-report-controls"
               sx={(theme) => ({
                 mt: 2,
                 p: 1.5,
@@ -1598,7 +1603,7 @@ export function ProcessBuilder() {
 
             <Divider sx={{ my: 2 }} />
 
-            <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 3 }}>
+            <Stack className="processlab-print-metrics" direction="row" sx={{ flexWrap: 'wrap', gap: 3 }}>
               <Box sx={{ minWidth: 0, flex: '1 1 180px' }}>
                 <MetricCard
                   label="Processing cost"
@@ -1616,7 +1621,7 @@ export function ProcessBuilder() {
               </Box>
 
               <Box sx={{ minWidth: 0, flex: '1 1 180px' }}>
-                <MetricCard label="Average cycle" value={formatDuration(result.averageCycleMinutes)} />
+                <MetricCard label="Average cycle" value={formatSimulationDuration(result.averageCycleMinutes)} />
                 {baseline ? (
                   <Box sx={{ mt: 1 }}>
                     <ComparisonChip
@@ -1628,7 +1633,7 @@ export function ProcessBuilder() {
               </Box>
 
               <Box sx={{ minWidth: 0, flex: '1 1 180px' }}>
-                <MetricCard label="Average queue" value={formatDuration(result.averageQueueMinutes)} />
+                <MetricCard label="Average queue" value={formatSimulationDuration(result.averageQueueMinutes)} />
                 {baseline ? (
                   <Box sx={{ mt: 1 }}>
                     <ComparisonChip
@@ -1662,6 +1667,7 @@ export function ProcessBuilder() {
             <Stack spacing={1}>
               {result.taskMetrics.map((metric) => (
                 <Stack
+                  className="processlab-print-task-row"
                   key={metric.taskId}
                   direction={{ xs: 'column', md: 'row' }}
                   sx={(theme) => ({
@@ -1684,7 +1690,7 @@ export function ProcessBuilder() {
                     Load {(metric.workloadRatio * 100).toFixed(0)}%
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ minWidth: 135 }}>
-                    Queue {formatDuration(metric.averageQueueMinutes)}
+                    Queue {formatSimulationDuration(metric.averageQueueMinutes)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ minWidth: 150 }}>
                     Capacity {metric.monthlyCapacity.toLocaleString()}
