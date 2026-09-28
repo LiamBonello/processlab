@@ -7,6 +7,7 @@ export interface ProcessStep {
   durationMinutes?: number;
   workers?: number;
   hourlyCost?: number;
+  variabilityPercent?: number;
 }
 
 export interface ProcessConnection {
