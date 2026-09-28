@@ -72,6 +72,24 @@ function edge(
   };
 }
 
+export const blankProcessTemplate: ProcessTemplate = {
+  id: 'blank-process',
+  name: 'Blank process',
+  description: 'A clean Start → Task → End workflow.',
+  monthlyVolume: 500,
+  workdaysPerMonth: 22,
+  hoursPerDay: 8,
+  nodes: [
+    control('start', 'Process starts', 'start', 80, 220),
+    task('task-1', 'First task', 390, 220, 5, 1, 25, 10),
+    control('end', 'Process complete', 'end', 720, 220),
+  ],
+  edges: [
+    edge('e1', 'start', 'task-1'),
+    edge('e2', 'task-1', 'end'),
+  ],
+};
+
 export const processTemplates: ProcessTemplate[] = [
   {
     id: 'invoice-processing',
