@@ -202,6 +202,27 @@ export function ProcessBuilder() {
     [edges, selectedNode],
   );
 
+  const highestLoadMetric = useMemo(
+    () =>
+      result?.taskMetrics.find((metric) => metric.taskId === result.bottleneckTaskId) ?? null,
+    [result],
+  );
+
+  const constraintLabel = highestLoadMetric
+    ? highestLoadMetric.workloadRatio >= 1
+      ? `Bottleneck: ${highestLoadMetric.label} · ${Math.round(highestLoadMetric.workloadRatio * 100)}% load`
+      : highestLoadMetric.workloadRatio >= 0.8
+        ? `Capacity watch: ${highestLoadMetric.label} · ${Math.round(highestLoadMetric.workloadRatio * 100)}% load`
+        : `Highest load: ${highestLoadMetric.label} · ${Math.round(highestLoadMetric.workloadRatio * 100)}%`
+    : null;
+
+  const constraintColor =
+    (highestLoadMetric?.workloadRatio ?? 0) >= 1
+      ? 'error'
+      : (highestLoadMetric?.workloadRatio ?? 0) >= 0.8
+        ? 'warning'
+        : 'default';
+
   const renderedEdges = useMemo(() => {
     const routeMetrics = new Map(
       (result?.routeMetrics ?? []).map((metric) => [
@@ -595,7 +616,9 @@ export function ProcessBuilder() {
             ...node,
             data: {
               ...node.data,
-              isBottleneck: node.id === nextResult.bottleneckTaskId,
+              isBottleneck:
+                node.id === nextResult.bottleneckTaskId &&
+                (metric?.workloadRatio ?? 0) >= 1,
               simulation: metric
                 ? {
                     visits: metric.visits,
@@ -891,11 +914,11 @@ export function ProcessBuilder() {
               </Box>
 
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                {result.bottleneckLabel ? (
+                {constraintLabel ? (
                   <Chip
-                    color="warning"
+                    color={constraintColor}
                     variant="outlined"
-                    label={`Bottleneck: ${result.bottleneckLabel}`}
+                    label={constraintLabel}
                   />
                 ) : null}
                 <Button
@@ -965,7 +988,7 @@ export function ProcessBuilder() {
                 <MetricCard
                   label="Completed in month"
                   value={result.throughputWithinMonth.toLocaleString()}
-                  detail={`${result.backlogAtMonthEnd.toLocaleString()} backlog`}
+                  detail={`${result.backlogAtMonthEnd.toLocaleString()} month-end carryover`}
                 />
                 {baseline ? (
                   <Box mt={1}>
