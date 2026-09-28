@@ -5,6 +5,7 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
 import CallSplitRoundedIcon from '@mui/icons-material/CallSplitRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
+import ReplayRoundedIcon from '@mui/icons-material/ReplayRounded';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import ScienceRoundedIcon from '@mui/icons-material/ScienceRounded';
 import {
@@ -29,9 +30,11 @@ import {
   useEdgesState,
   useNodesState,
   type Connection,
+  type EdgeTypes,
   type NodeTypes,
 } from '@xyflow/react';
 import { ProcessNode } from './components/ProcessNode';
+import { SimulationEdge } from './components/SimulationEdge';
 import type { ProcessFlowEdge, ProcessFlowNode } from './process-builder.types';
 import { simulateProcess } from '@/features/simulation/engine/simulate';
 import type { SimulationResult } from '@/features/simulation/engine/types';
@@ -102,6 +105,7 @@ const initialEdges: ProcessFlowEdge[] = [
 ];
 
 const nodeTypes: NodeTypes = { process: ProcessNode };
+const edgeTypes: EdgeTypes = { simulation: SimulationEdge };
 
 const currencyFormatter = new Intl.NumberFormat('en', {
   style: 'currency',
@@ -160,11 +164,6 @@ function ComparisonChip({
   );
 }
 
-function edgeProbabilityLabel(edge: ProcessFlowEdge) {
-  const probability = edge.data?.probability;
-  return probability === undefined ? undefined : `${Math.round(probability * 100)}%`;
-}
-
 export function ProcessBuilder() {
   const [nodes, setNodes, onNodesChange] = useNodesState<ProcessFlowNode>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<ProcessFlowEdge>(initialEdges);
@@ -203,27 +202,47 @@ export function ProcessBuilder() {
     [edges, selectedNode],
   );
 
-  const renderedEdges = useMemo(
-    () =>
-      edges.map((edge) => ({
+  const renderedEdges = useMemo(() => {
+    const routeMetrics = new Map(
+      (result?.routeMetrics ?? []).map((metric) => [
+        `${metric.source}::${metric.target}`,
+        metric,
+      ]),
+    );
+
+    return edges.map((edge) => {
+      const metric = routeMetrics.get(`${edge.source}::${edge.target}`);
+
+      return {
         ...edge,
-        animated: isAnimating,
-        label: edgeProbabilityLabel(edge),
+        type: 'simulation' as const,
+        data: {
+          ...edge.data,
+          simulationVisits: metric?.visits,
+          isPlaying: isAnimating,
+        },
         style: {
           ...edge.style,
-          strokeWidth: isAnimating ? 2.2 : 1.5,
+          strokeWidth: isAnimating ? 2.2 : 1.7,
         },
-      })),
-    [edges, isAnimating],
-  );
+      };
+    });
+  }, [edges, isAnimating, result]);
 
   const clearResult = useCallback(() => {
     setResult(null);
     setSimulationError(null);
     setNodes((currentNodes) =>
       currentNodes.map((node) =>
-        node.data.isBottleneck
-          ? { ...node, data: { ...node.data, isBottleneck: false } }
+        node.data.isBottleneck || node.data.simulation
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                isBottleneck: false,
+                simulation: undefined,
+              },
+            }
           : node,
       ),
     );
@@ -535,6 +554,14 @@ export function ProcessBuilder() {
     clearResult();
   }, [clearResult, edges, selectedNode, setEdges, setNodes]);
 
+  const replaySimulation = useCallback(() => {
+    if (!result) return;
+
+    setIsAnimating(true);
+    if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
+    animationTimeoutRef.current = setTimeout(() => setIsAnimating(false), 4200);
+  }, [result]);
+
   const runSimulation = useCallback(() => {
     try {
       const nextResult = simulateProcess(
@@ -556,19 +583,34 @@ export function ProcessBuilder() {
 
       setResult(nextResult);
       setSimulationError(null);
+      const taskMetrics = new Map(
+        nextResult.taskMetrics.map((metric) => [metric.taskId, metric]),
+      );
+
       setNodes((currentNodes) =>
-        currentNodes.map((node) => ({
-          ...node,
-          data: {
-            ...node.data,
-            isBottleneck: node.id === nextResult.bottleneckTaskId,
-          },
-        })),
+        currentNodes.map((node) => {
+          const metric = taskMetrics.get(node.id);
+
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              isBottleneck: node.id === nextResult.bottleneckTaskId,
+              simulation: metric
+                ? {
+                    visits: metric.visits,
+                    averageQueueMinutes: metric.averageQueueMinutes,
+                    workloadRatio: metric.workloadRatio,
+                  }
+                : undefined,
+            },
+          };
+        }),
       );
 
       setIsAnimating(true);
       if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
-      animationTimeoutRef.current = setTimeout(() => setIsAnimating(false), 1600);
+      animationTimeoutRef.current = setTimeout(() => setIsAnimating(false), 4200);
     } catch (error) {
       setResult(null);
       setIsAnimating(false);
@@ -633,6 +675,7 @@ export function ProcessBuilder() {
               nodes={nodes}
               edges={renderedEdges}
               nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
               onNodesChange={(changes) => {
                 onNodesChange(changes);
                 setResult(null);
@@ -655,7 +698,7 @@ export function ProcessBuilder() {
                 setSelectedEdgeId(null);
               }}
               fitView
-              fitViewOptions={{ padding: 0.12 }}
+              fitViewOptions={{ padding: 0.16, minZoom: 0.62, maxZoom: 0.9 }}
               minZoom={0.3}
               maxZoom={1.8}
             >
@@ -855,6 +898,15 @@ export function ProcessBuilder() {
                     label={`Bottleneck: ${result.bottleneckLabel}`}
                   />
                 ) : null}
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<ReplayRoundedIcon />}
+                  onClick={replaySimulation}
+                  disabled={isAnimating}
+                >
+                  {isAnimating ? 'Playing' : 'Replay flow'}
+                </Button>
                 <Button
                   size="small"
                   variant="outlined"
