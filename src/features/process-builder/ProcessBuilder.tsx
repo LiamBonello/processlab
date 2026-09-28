@@ -1112,6 +1112,7 @@ export function ProcessBuilder() {
   return (
     <Box
       component="main"
+      className="processlab-app-shell"
       sx={(theme) => ({
         minHeight: '100vh',
         bgcolor: 'background.default',
@@ -1459,6 +1460,15 @@ export function ProcessBuilder() {
                 <Typography variant="caption" color="text.secondary">
                   {monthlyVolume.toLocaleString()} transactions/month · {workdaysPerMonth} workdays · {hoursPerDay} hours/day
                 </Typography>
+                {highestLoadMetric ? (
+                  <Typography
+                    className="processlab-print-only"
+                    variant="body2"
+                    sx={{ mt: 0.75, fontWeight: 700 }}
+                  >
+                    Primary constraint: {highestLoadMetric.label} · {Math.round(highestLoadMetric.workloadRatio * 100)}% load
+                  </Typography>
+                ) : null}
               </Box>
 
               <Stack
