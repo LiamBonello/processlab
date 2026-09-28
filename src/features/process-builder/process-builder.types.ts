@@ -7,6 +7,7 @@ export interface ProcessNodeData extends Record<string, unknown> {
   durationMinutes: number;
   workers: number;
   hourlyCost: number;
+  variabilityPercent: number;
   isBottleneck?: boolean;
   simulation?: {
     visits: number;
