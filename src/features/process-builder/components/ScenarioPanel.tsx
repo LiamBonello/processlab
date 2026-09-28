@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import type { ScenarioSnapshot } from '../workspace';
 import type { SimulationResult } from '@/features/simulation/engine/types';
+import { formatSimulationDuration } from '@/features/simulation/format';
 
 const currencyFormatter = new Intl.NumberFormat('en', {
   style: 'currency',
@@ -100,7 +101,7 @@ export function ScenarioPanel({
                 Cycle
               </Typography>
               <Typography>
-                {scenario.result.averageCycleMinutes.toFixed(1)} min
+                {formatSimulationDuration(scenario.result.averageCycleMinutes)}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 {deltaText(
@@ -115,7 +116,7 @@ export function ScenarioPanel({
                 Queue
               </Typography>
               <Typography>
-                {scenario.result.averageQueueMinutes.toFixed(1)} min
+                {formatSimulationDuration(scenario.result.averageQueueMinutes)}
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 {deltaText(
