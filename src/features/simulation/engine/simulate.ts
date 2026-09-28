@@ -123,12 +123,17 @@ function validateProcess(
     stepIds.add(step.id);
 
     if (step.kind === 'task') {
-      assertPositiveFinite(step.durationMinutes ?? 0, `${step.label} duration`);
-      assertPositiveFinite(step.workers ?? 0, `${step.label} workers`);
-      if (!Number.isInteger(step.workers)) {
+      const durationMinutes = step.durationMinutes ?? 0;
+      const workers = step.workers ?? 0;
+      const hourlyCost = step.hourlyCost ?? Number.NaN;
+
+      assertPositiveFinite(durationMinutes, `${step.label} duration`);
+      assertPositiveFinite(workers, `${step.label} workers`);
+
+      if (!Number.isInteger(workers)) {
         throw new Error(`${step.label} workers must be a whole number.`);
       }
-      if (!Number.isFinite(step.hourlyCost) || (step.hourlyCost ?? 0) < 0) {
+      if (!Number.isFinite(hourlyCost) || hourlyCost < 0) {
         throw new Error(`${step.label} hourly cost cannot be negative.`);
       }
     }
