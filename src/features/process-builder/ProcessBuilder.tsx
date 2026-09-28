@@ -540,6 +540,7 @@ export function ProcessBuilder() {
         durationMinutes: 5,
         workers: 1,
         hourlyCost: 25,
+        variabilityPercent: 10,
       },
     };
 
@@ -603,6 +604,7 @@ export function ProcessBuilder() {
             durationMinutes: 0,
             workers: 0,
             hourlyCost: 0,
+            variabilityPercent: 0,
           },
         },
         {
@@ -615,6 +617,7 @@ export function ProcessBuilder() {
             durationMinutes: 5,
             workers: 1,
             hourlyCost: 25,
+            variabilityPercent: 10,
           },
         },
         {
@@ -627,6 +630,7 @@ export function ProcessBuilder() {
             durationMinutes: 5,
             workers: 1,
             hourlyCost: 25,
+            variabilityPercent: 10,
           },
         },
       ];
@@ -771,6 +775,8 @@ export function ProcessBuilder() {
           durationMinutes: node.data.kind === 'task' ? node.data.durationMinutes : undefined,
           workers: node.data.kind === 'task' ? node.data.workers : undefined,
           hourlyCost: node.data.kind === 'task' ? node.data.hourlyCost : undefined,
+          variabilityPercent:
+            node.data.kind === 'task' ? node.data.variabilityPercent : undefined,
         })),
         edges.map((edge) => ({
           source: edge.source,
@@ -1013,6 +1019,21 @@ export function ProcessBuilder() {
                           })
                         }
                         slotProps={{ htmlInput: { min: 0, step: 0.5 } }}
+                      />
+                      <TextField
+                        label="Duration variability (%)"
+                        type="number"
+                        value={selectedNode.data.variabilityPercent}
+                        onChange={(event) =>
+                          updateSelectedNode({
+                            variabilityPercent: Math.min(
+                              100,
+                              Math.max(0, Number(event.target.value)),
+                            ),
+                          })
+                        }
+                        helperText="0% is fixed. Higher values simulate real-world task-time variation."
+                        slotProps={{ htmlInput: { min: 0, max: 100, step: 5 } }}
                       />
                     </>
                   ) : null}
