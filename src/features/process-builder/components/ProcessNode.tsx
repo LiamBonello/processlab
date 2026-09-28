@@ -59,7 +59,7 @@ export function ProcessNode({ data, selected }: NodeProps<ProcessFlowNode>) {
     >
       {canReceive ? <Handle type="target" position={Position.Left} /> : null}
 
-      <Stack direction="row" alignItems="center" spacing={1}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
         <KindIcon
           sx={{
             fontSize: 18,
@@ -73,7 +73,7 @@ export function ProcessNode({ data, selected }: NodeProps<ProcessFlowNode>) {
                     : 'primary.light',
           }}
         />
-        <Typography variant="subtitle2" fontWeight={700} noWrap sx={{ flex: 1 }}>
+        <Typography variant="subtitle2" noWrap sx={{ flex: 1, fontWeight: 700 }}>
           {data.label}
         </Typography>
         {data.kind !== 'task' ? (
@@ -83,20 +83,20 @@ export function ProcessNode({ data, selected }: NodeProps<ProcessFlowNode>) {
 
       {data.kind === 'task' ? (
         <>
-          <Stack direction="row" spacing={1.5} mt={1.1} color="text.secondary">
-            <Stack direction="row" spacing={0.5} alignItems="center">
+          <Stack direction="row" spacing={1.5} sx={{ mt: 1.1, color: 'text.secondary' }}>
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
               <AccessTimeRoundedIcon sx={{ fontSize: 15 }} />
               <Typography variant="caption">{data.durationMinutes} min</Typography>
             </Stack>
-            <Stack direction="row" spacing={0.5} alignItems="center">
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
               <GroupsRoundedIcon sx={{ fontSize: 15 }} />
               <Typography variant="caption">{data.workers}</Typography>
             </Stack>
           </Stack>
 
           {data.simulation ? (
-            <Box mt={1.15}>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" mb={0.55}>
+            <Box sx={{ mt: 1.15 }}>
+              <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 0.55 }}>
                 <Typography variant="caption" color="text.secondary">
                   {data.simulation.visits.toLocaleString()} visits
                 </Typography>
@@ -119,14 +119,14 @@ export function ProcessNode({ data, selected }: NodeProps<ProcessFlowNode>) {
                 }
                 sx={{ height: 4, borderRadius: 999 }}
               />
-              <Typography variant="caption" color="text.secondary" display="block" mt={0.45}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.45 }}>
                 Avg queue {data.simulation.averageQueueMinutes.toFixed(1)} min
               </Typography>
             </Box>
           ) : null}
         </>
       ) : data.kind === 'decision' ? (
-        <Typography variant="caption" color="text.secondary" display="block" mt={1}>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
           Routes work by probability
         </Typography>
       ) : null}
@@ -135,7 +135,7 @@ export function ProcessNode({ data, selected }: NodeProps<ProcessFlowNode>) {
       (data.kind !== 'task' ||
         data.playback.queued > 0 ||
         data.playback.processing > 0) ? (
-        <Stack direction="row" spacing={0.65} mt={1} flexWrap="wrap" useFlexGap>
+        <Stack direction="row" spacing={0.65} useFlexGap sx={{ mt: 1, flexWrap: 'wrap' }}>
           {data.kind === 'task' && data.playback.queued > 0 ? (
             <Chip
               size="small"
