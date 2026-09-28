@@ -306,6 +306,41 @@ export function ProcessBuilder() {
     [edges, selectedNode],
   );
 
+  const simulationSteps = useMemo<ProcessStep[]>(
+    () =>
+      nodes.map((node) => ({
+        id: node.id,
+        label: node.data.label,
+        kind: node.data.kind,
+        durationMinutes:
+          node.data.kind === 'task' ? node.data.durationMinutes : undefined,
+        workers: node.data.kind === 'task' ? node.data.workers : undefined,
+        hourlyCost:
+          node.data.kind === 'task' ? node.data.hourlyCost : undefined,
+        variabilityPercent:
+          node.data.kind === 'task'
+            ? node.data.variabilityPercent
+            : undefined,
+      })),
+    [nodes],
+  );
+
+  const simulationConnections = useMemo<ProcessConnection[]>(
+    () =>
+      edges.map((edge) => ({
+        source: edge.source,
+        target: edge.target,
+        probability: edge.data?.probability,
+      })),
+    [edges],
+  );
+
+  const simulationInsights = useMemo(
+    () =>
+      result ? buildSimulationInsights(result, monthlyVolume) : [],
+    [monthlyVolume, result],
+  );
+
   const highestLoadMetric = useMemo(
     () =>
       result?.taskMetrics.find((metric) => metric.taskId === result.bottleneckTaskId) ?? null,
@@ -457,6 +492,7 @@ export function ProcessBuilder() {
 
   const clearResult = useCallback(() => {
     setResult(null);
+    setStressTestResult(null);
     setSimulationError(null);
     playbackProgressRef.current = 0;
     setPlaybackProgress(0);
@@ -838,21 +874,8 @@ export function ProcessBuilder() {
   const runSimulation = useCallback(() => {
     try {
       const nextResult = simulateProcess(
-        nodes.map((node) => ({
-          id: node.id,
-          label: node.data.label,
-          kind: node.data.kind,
-          durationMinutes: node.data.kind === 'task' ? node.data.durationMinutes : undefined,
-          workers: node.data.kind === 'task' ? node.data.workers : undefined,
-          hourlyCost: node.data.kind === 'task' ? node.data.hourlyCost : undefined,
-          variabilityPercent:
-            node.data.kind === 'task' ? node.data.variabilityPercent : undefined,
-        })),
-        edges.map((edge) => ({
-          source: edge.source,
-          target: edge.target,
-          probability: edge.data?.probability,
-        })),
+        simulationSteps,
+        simulationConnections,
         { monthlyVolume, workdaysPerMonth, hoursPerDay },
       );
 
@@ -895,7 +918,14 @@ export function ProcessBuilder() {
       setPlaybackStatus('idle');
       setSimulationError(error instanceof Error ? error.message : 'Unable to run the simulation.');
     }
-  }, [edges, hoursPerDay, monthlyVolume, nodes, setNodes, workdaysPerMonth]);
+  }, [
+    hoursPerDay,
+    monthlyVolume,
+    setNodes,
+    simulationConnections,
+    simulationSteps,
+    workdaysPerMonth,
+  ]);
 
   return (
     <Box
