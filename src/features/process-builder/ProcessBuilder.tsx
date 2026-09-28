@@ -182,6 +182,76 @@ export function ProcessBuilder() {
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
+    const stored = localStorage.getItem(WORKSPACE_STORAGE_KEY);
+    const workspace = stored ? parseWorkspace(stored) : null;
+
+    if (workspace) {
+      setProjectName(workspace.projectName);
+      setNodes(
+        workspace.nodes.map((node) => ({
+          ...node,
+          type: 'process' as const,
+          data: {
+            ...node.data,
+            variabilityPercent: node.data.variabilityPercent ?? 0,
+            isBottleneck: false,
+            simulation: undefined,
+            playback: undefined,
+          },
+        })),
+      );
+      setEdges(
+        workspace.edges.map((edge) => ({
+          ...edge,
+          type: 'simulation' as const,
+          data: {
+            probability: edge.data?.probability,
+          },
+        })),
+      );
+      setMonthlyVolume(workspace.monthlyVolume);
+      setWorkdaysPerMonth(workspace.workdaysPerMonth);
+      setHoursPerDay(workspace.hoursPerDay);
+      setSavedScenarios(workspace.savedScenarios);
+      setSelectedNodeId(null);
+      setSelectedEdgeId(null);
+    }
+
+    setWorkspaceReady(true);
+  }, [setEdges, setNodes]);
+
+  useEffect(() => {
+    if (!workspaceReady) return;
+
+    const saveTimeout = window.setTimeout(() => {
+      const workspace = createWorkspace(
+        projectName.trim() || 'Untitled process',
+        nodes,
+        edges,
+        monthlyVolume,
+        workdaysPerMonth,
+        hoursPerDay,
+        savedScenarios,
+      );
+      localStorage.setItem(
+        WORKSPACE_STORAGE_KEY,
+        JSON.stringify(workspace),
+      );
+    }, 250);
+
+    return () => window.clearTimeout(saveTimeout);
+  }, [
+    edges,
+    hoursPerDay,
+    monthlyVolume,
+    nodes,
+    projectName,
+    savedScenarios,
+    workdaysPerMonth,
+    workspaceReady,
+  ]);
+
+  useEffect(() => {
     if (playbackStatus !== 'playing' || !result) return;
 
     let previousTimestamp = performance.now();
