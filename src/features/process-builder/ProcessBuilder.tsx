@@ -385,7 +385,7 @@ export function ProcessBuilder() {
     return edges.map((edge) => {
       const routeKey = `${edge.source}::${edge.target}`;
       const metric = routeMetrics.get(routeKey);
-      const activeTraceIds = activeRouteTraceIds.get(routeKey) ?? [];
+      const activeTraceIds = (activeRouteTraceIds.get(routeKey) ?? []).slice(-6);
 
       return {
         ...edge,
@@ -510,6 +510,9 @@ export function ProcessBuilder() {
       );
       setResult(null);
       setSimulationError(null);
+      playbackProgressRef.current = 0;
+      setPlaybackProgress(0);
+      setPlaybackStatus('idle');
     },
     [selectedNodeId, setNodes],
   );
