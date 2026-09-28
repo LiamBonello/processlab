@@ -5,15 +5,19 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
 import CallSplitRoundedIcon from '@mui/icons-material/CallSplitRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
-import ReplayRoundedIcon from '@mui/icons-material/ReplayRounded';
+import PauseRoundedIcon from '@mui/icons-material/PauseRounded';
+import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
+import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import ScienceRoundedIcon from '@mui/icons-material/ScienceRounded';
 import {
   Alert,
   Box,
   Button,
+  ButtonGroup,
   Chip,
   Divider,
+  LinearProgress,
   Paper,
   Stack,
   TextField,
@@ -113,6 +117,21 @@ const currencyFormatter = new Intl.NumberFormat('en', {
   maximumFractionDigits: 0,
 });
 
+type PlaybackStatus = 'idle' | 'playing' | 'paused' | 'finished';
+
+const PLAYBACK_DURATION_MS = 14000;
+
+function formatPlaybackTime(minutes: number, hoursPerDay: number) {
+  const safeMinutes = Math.max(0, minutes);
+  const workdayMinutes = Math.max(1, hoursPerDay * 60);
+  const day = Math.floor(safeMinutes / workdayMinutes) + 1;
+  const minutesIntoShift = safeMinutes % workdayMinutes;
+  const hours = Math.floor(minutesIntoShift / 60);
+  const remainingMinutes = Math.floor(minutesIntoShift % 60);
+
+  return `Day ${day} · +${hours}h ${remainingMinutes.toString().padStart(2, '0')}m`;
+}
+
 function formatDuration(minutes: number) {
   if (minutes < 60) return `${minutes.toFixed(1)} min`;
   const hours = minutes / 60;
@@ -175,14 +194,48 @@ export function ProcessBuilder() {
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [baseline, setBaseline] = useState<SimulationResult | null>(null);
   const [simulationError, setSimulationError] = useState<string | null>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [playbackStatus, setPlaybackStatus] = useState<PlaybackStatus>('idle');
+  const [playbackProgress, setPlaybackProgress] = useState(0);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const playbackProgressRef = useRef(0);
+  const playbackFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
-    return () => {
-      if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
+    if (playbackStatus !== 'playing' || !result) return;
+
+    let previousTimestamp = performance.now();
+
+    const tick = (timestamp: number) => {
+      const elapsed = timestamp - previousTimestamp;
+      previousTimestamp = timestamp;
+
+      const nextProgress = Math.min(
+        1,
+        playbackProgressRef.current +
+          (elapsed * playbackSpeed) / PLAYBACK_DURATION_MS,
+      );
+
+      playbackProgressRef.current = nextProgress;
+      setPlaybackProgress(nextProgress);
+
+      if (nextProgress >= 1) {
+        setPlaybackStatus('finished');
+        playbackFrameRef.current = null;
+        return;
+      }
+
+      playbackFrameRef.current = requestAnimationFrame(tick);
     };
-  }, []);
+
+    playbackFrameRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (playbackFrameRef.current !== null) {
+        cancelAnimationFrame(playbackFrameRef.current);
+        playbackFrameRef.current = null;
+      }
+    };
+  }, [playbackSpeed, playbackStatus, result]);
 
   const selectedNode = useMemo(
     () => nodes.find((node) => node.id === selectedNodeId) ?? null,
