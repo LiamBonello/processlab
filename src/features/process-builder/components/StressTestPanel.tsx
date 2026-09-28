@@ -27,10 +27,9 @@ export function StressTestPanel({
     <Paper variant="outlined" sx={{ p: 2 }}>
       <Stack
         direction={{ xs: 'column', md: 'row' }}
-        justifyContent="space-between"
-        gap={1.5}
+        sx={{ justifyContent: 'space-between', gap: 1.5 }}
       >
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
           <SpeedRoundedIcon color="primary" />
           <Box>
             <Typography variant="h6">Volume stress test</Typography>
@@ -40,7 +39,7 @@ export function StressTestPanel({
           </Box>
         </Stack>
 
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
           {result.firstWarningVolume ? (
             <Chip
               size="small"
@@ -67,7 +66,7 @@ export function StressTestPanel({
         </Stack>
       </Stack>
 
-      <Stack spacing={1} mt={2}>
+      <Stack spacing={1} sx={{ mt: 2 }}>
         {result.points.map((point) => (
           <Box
             key={point.multiplier}
@@ -86,7 +85,7 @@ export function StressTestPanel({
             })}
           >
             <Box>
-              <Typography fontWeight={700}>
+              <Typography sx={{ fontWeight: 700 }}>
                 {point.monthlyVolume.toLocaleString()}
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -97,8 +96,7 @@ export function StressTestPanel({
             <Box>
               <Stack
                 direction="row"
-                justifyContent="space-between"
-                mb={0.5}
+                sx={{ justifyContent: 'space-between', mb: 0.5 }}
               >
                 <Typography variant="caption" color="text.secondary">
                   {point.constrainedTaskLabel ?? 'No task'}
