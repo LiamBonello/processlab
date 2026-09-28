@@ -11,6 +11,7 @@ import {
   alpha,
 } from '@mui/material';
 import type { StressTestResult } from '@/features/simulation/stress-test';
+import { formatSimulationDuration } from '@/features/simulation/format';
 
 function loadColor(load: number): 'error' | 'warning' | 'primary' {
   if (load >= 1) return 'error';
@@ -24,7 +25,7 @@ export function StressTestPanel({
   result: StressTestResult;
 }) {
   return (
-    <Paper variant="outlined" sx={{ p: 2 }}>
+    <Paper className="processlab-print-section" variant="outlined" sx={{ p: 2 }}>
       <Stack
         direction={{ xs: 'column', md: 'row' }}
         sx={{ justifyContent: 'space-between', gap: 1.5 }}
@@ -127,7 +128,7 @@ export function StressTestPanel({
                 Avg queue
               </Typography>
               <Typography>
-                {point.averageQueueMinutes.toFixed(1)} min
+                {formatSimulationDuration(point.averageQueueMinutes)}
               </Typography>
             </Box>
           </Box>
