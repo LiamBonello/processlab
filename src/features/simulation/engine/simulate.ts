@@ -274,6 +274,13 @@ export function simulateProcess(
   }
 
   const taskSteps = steps.filter((step) => step.kind === 'task');
+  const routeVisits = new Map(
+    connections.map((connection) => [
+      `${connection.source}::${connection.target}`,
+      0,
+    ]),
+  );
+
   const workerAvailability = new Map(
     taskSteps.map((step) => [
       step.id,
@@ -318,6 +325,8 @@ export function simulateProcess(
         random,
       );
       if (nextConnection) {
+        const routeKey = `${nextConnection.source}::${nextConnection.target}`;
+        routeVisits.set(routeKey, (routeVisits.get(routeKey) ?? 0) + 1);
         eventQueue.push({
           at: event.at,
           transactionId: event.transactionId,
@@ -354,6 +363,8 @@ export function simulateProcess(
       random,
     );
     if (nextConnection) {
+      const routeKey = `${nextConnection.source}::${nextConnection.target}`;
+      routeVisits.set(routeKey, (routeVisits.get(routeKey) ?? 0) + 1);
       eventQueue.push({
         at: finishesAt,
         transactionId: event.transactionId,
@@ -407,6 +418,13 @@ export function simulateProcess(
     0,
   );
 
+  const routeMetrics = connections.map((connection) => ({
+    source: connection.source,
+    target: connection.target,
+    visits: routeVisits.get(`${connection.source}::${connection.target}`) ?? 0,
+    probability: connection.probability,
+  }));
+
   return {
     transactions: transactionCount,
     completedTransactions: completed.length,
@@ -419,5 +437,6 @@ export function simulateProcess(
     bottleneckTaskId: bottleneck?.taskId ?? null,
     bottleneckLabel: bottleneck?.label ?? null,
     taskMetrics,
+    routeMetrics,
   };
 }
