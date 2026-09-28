@@ -1,21 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { simulateProcess } from './simulate';
-import type { ProcessConnection, ProcessTask } from './types';
+import type { ProcessConnection, ProcessStep } from './types';
 
-const tasks: ProcessTask[] = [
-  { id: 'check', label: 'Check invoice', durationMinutes: 5, workers: 2, hourlyCost: 22 },
-  { id: 'approve', label: 'Approve', durationMinutes: 8, workers: 1, hourlyCost: 35 },
-  { id: 'enter', label: 'Enter system', durationMinutes: 4, workers: 1, hourlyCost: 22 },
+const steps: ProcessStep[] = [
+  { id: 'start', label: 'Start', kind: 'start' },
+  { id: 'check', label: 'Check invoice', kind: 'task', durationMinutes: 5, workers: 2, hourlyCost: 22 },
+  { id: 'decision', label: 'Needs approval?', kind: 'decision' },
+  { id: 'approve', label: 'Approve', kind: 'task', durationMinutes: 8, workers: 1, hourlyCost: 35 },
+  { id: 'enter', label: 'Enter system', kind: 'task', durationMinutes: 4, workers: 1, hourlyCost: 22 },
+  { id: 'end', label: 'End', kind: 'end' },
 ];
 
 const connections: ProcessConnection[] = [
-  { source: 'check', target: 'approve' },
+  { source: 'start', target: 'check' },
+  { source: 'check', target: 'decision' },
+  { source: 'decision', target: 'approve', probability: 0.35 },
+  { source: 'decision', target: 'enter', probability: 0.65 },
   { source: 'approve', target: 'enter' },
+  { source: 'enter', target: 'end' },
 ];
 
 describe('simulateProcess', () => {
-  it('simulates a linear process deterministically', () => {
-    const result = simulateProcess(tasks, connections, {
+  it('simulates a branched workflow deterministically', () => {
+    const result = simulateProcess(steps, connections, {
       monthlyVolume: 800,
       workdaysPerMonth: 22,
       hoursPerDay: 8,
@@ -26,13 +33,20 @@ describe('simulateProcess', () => {
     expect(result.completedTransactions).toBe(800);
     expect(result.totalProcessingCost).toBeGreaterThan(0);
     expect(result.taskMetrics).toHaveLength(3);
-    expect(result.bottleneckTaskId).toBe('approve');
+    expect(result.taskMetrics.find((metric) => metric.taskId === 'approve')?.visits).toBeGreaterThan(0);
   });
 
   it('reports backlog when a task is overloaded', () => {
     const result = simulateProcess(
-      [{ id: 'slow', label: 'Slow task', durationMinutes: 60, workers: 1, hourlyCost: 20 }],
-      [],
+      [
+        { id: 'start', label: 'Start', kind: 'start' },
+        { id: 'slow', label: 'Slow task', kind: 'task', durationMinutes: 60, workers: 1, hourlyCost: 20 },
+        { id: 'end', label: 'End', kind: 'end' },
+      ],
+      [
+        { source: 'start', target: 'slow' },
+        { source: 'slow', target: 'end' },
+      ],
       {
         monthlyVolume: 300,
         workdaysPerMonth: 20,
@@ -45,14 +59,34 @@ describe('simulateProcess', () => {
     expect(result.taskMetrics[0].workloadRatio).toBeGreaterThan(1);
   });
 
+  it('rejects decision probabilities that do not total 100%', () => {
+    expect(() =>
+      simulateProcess(
+        steps,
+        connections.map((connection) =>
+          connection.source === 'decision' && connection.target === 'approve'
+            ? { ...connection, probability: 0.2 }
+            : connection,
+        ),
+        { monthlyVolume: 100, workdaysPerMonth: 20, hoursPerDay: 8 },
+      ),
+    ).toThrow(/must total 100%/);
+  });
+
   it('rejects cycles', () => {
     expect(() =>
       simulateProcess(
-        tasks,
         [
-          { source: 'check', target: 'approve' },
-          { source: 'approve', target: 'enter' },
-          { source: 'enter', target: 'check' },
+          { id: 'start', label: 'Start', kind: 'start' },
+          { id: 'a', label: 'A', kind: 'task', durationMinutes: 1, workers: 1, hourlyCost: 1 },
+          { id: 'b', label: 'B', kind: 'task', durationMinutes: 1, workers: 1, hourlyCost: 1 },
+          { id: 'end', label: 'End', kind: 'end' },
+        ],
+        [
+          { source: 'start', target: 'a' },
+          { source: 'a', target: 'b' },
+          { source: 'b', target: 'a' },
+          { source: 'b', target: 'end' },
         ],
         { monthlyVolume: 100, workdaysPerMonth: 20, hoursPerDay: 8 },
       ),
