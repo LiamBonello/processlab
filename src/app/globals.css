@@ -1,0 +1,17 @@
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.react-flow__attribution {
+  font-size: 9px;
+  opacity: 0.45;
+}
