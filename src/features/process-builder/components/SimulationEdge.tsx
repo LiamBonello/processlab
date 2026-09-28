@@ -33,8 +33,8 @@ export function SimulationEdge({
 
   const probability = data?.probability;
   const visits = data?.simulationVisits;
-  const isPlaying = Boolean(data?.isPlaying && (visits ?? 0) > 0);
-  const particleCount = visits && visits > 0 ? Math.min(4, Math.max(1, Math.ceil(visits / 250))) : 0;
+  const activeTraceIds = data?.activeTraceIds ?? [];
+  const playbackSpeed = data?.playbackSpeed ?? 1;
 
   return (
     <>
@@ -48,23 +48,21 @@ export function SimulationEdge({
         }}
       />
 
-      {isPlaying
-        ? Array.from({ length: particleCount }, (_, index) => (
-            <circle
-              key={index}
-              r={4}
-              fill="var(--mui-palette-primary-main)"
-              opacity={0.95}
-            >
-              <animateMotion
-                dur={String(1.25 + index * 0.18) + 's'}
-                begin={String(index * 0.28) + 's'}
-                repeatCount="indefinite"
-                path={edgePath}
-              />
-            </circle>
-          ))
-        : null}
+      {activeTraceIds.map((traceId, index) => (
+        <circle
+          key={traceId}
+          r={4.2}
+          fill="var(--mui-palette-primary-main)"
+          opacity={0.96}
+        >
+          <animateMotion
+            dur={String(Math.max(0.22, 0.78 / playbackSpeed)) + 's'}
+            begin={String(index * 0.035) + 's'}
+            repeatCount="1"
+            path={edgePath}
+          />
+        </circle>
+      ))}
 
       {probability !== undefined || visits !== undefined ? (
         <EdgeLabelRenderer>
