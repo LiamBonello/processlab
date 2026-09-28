@@ -1123,6 +1123,7 @@ export function ProcessBuilder() {
     >
       <Stack spacing={2} sx={{ maxWidth: 1760, mx: 'auto' }}>
         <Stack
+          className="processlab-no-print"
           direction={{ xs: 'column', md: 'row' }}
           alignItems={{ xs: 'stretch', md: 'center' }}
           justifyContent="space-between"
@@ -1199,7 +1200,12 @@ export function ProcessBuilder() {
 
         {simulationError ? <Alert severity="error">{simulationError}</Alert> : null}
 
-        <Stack direction={{ xs: 'column', xl: 'row' }} spacing={2} alignItems="stretch">
+        <Stack
+          className="processlab-no-print"
+          direction={{ xs: 'column', xl: 'row' }}
+          spacing={2}
+          alignItems="stretch"
+        >
           <Paper
             variant="outlined"
             sx={{
@@ -1433,7 +1439,7 @@ export function ProcessBuilder() {
         </Stack>
 
         {result ? (
-          <Paper variant="outlined" sx={{ p: 2 }}>
+          <Paper className="processlab-print-report" variant="outlined" sx={{ p: 2 }}>
             <Stack
               direction={{ xs: 'column', md: 'row' }}
               justifyContent="space-between"
@@ -1441,6 +1447,9 @@ export function ProcessBuilder() {
               gap={2}
             >
               <Box>
+                <Typography variant="overline" color="text.secondary">
+                  {projectName}
+                </Typography>
                 <Typography variant="h6">Simulation result</Typography>
                 <Typography variant="body2" color="text.secondary">
                   {result.transactions.toLocaleString()} transactions across {result.taskMetrics.length} working tasks
@@ -1683,7 +1692,83 @@ export function ProcessBuilder() {
             Baseline saved. Change the workflow or assumptions, then run the simulation again to compare the scenario.
           </Alert>
         ) : null}
+
+        {result ? <InsightsPanel insights={simulationInsights} /> : null}
+
+        {result && stressTestResult ? (
+          <StressTestPanel result={stressTestResult} />
+        ) : null}
+
+        {result ? (
+          <ScenarioPanel
+            scenarios={savedScenarios}
+            currentResult={result}
+            onSetBaseline={useScenarioAsBaseline}
+            onDelete={deleteScenario}
+          />
+        ) : null}
       </Stack>
+
+      <Dialog
+        open={templateDialogOpen}
+        onClose={() => setTemplateDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Start from a template</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={1}>
+            {[blankProcessTemplate, ...processTemplates].map((template) => (
+              <Button
+                key={template.id}
+                variant="outlined"
+                onClick={() => applyTemplate(template)}
+                sx={{
+                  justifyContent: 'flex-start',
+                  textAlign: 'left',
+                  px: 2,
+                  py: 1.5,
+                }}
+              >
+                <Box>
+                  <Typography fontWeight={700}>{template.name}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {template.description}
+                  </Typography>
+                </Box>
+              </Button>
+            ))}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTemplateDialogOpen(false)}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={scenarioDialogOpen}
+        onClose={() => setScenarioDialogOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Save scenario</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Scenario name"
+            value={scenarioName}
+            onChange={(event) => setScenarioName(event.target.value)}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setScenarioDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={saveScenario}>
+            Save scenario
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
