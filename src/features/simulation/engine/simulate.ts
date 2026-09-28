@@ -209,7 +209,7 @@ function validateProcess(
         throw new Error(`${step.label} requires a probability on every branch.`);
       }
 
-      const total = probabilities.reduce((sum, probability) => sum + (probability ?? 0), 0);
+      const total = probabilities.reduce<number>((sum, probability) => sum + (probability ?? 0), 0);
       if (Math.abs(total - 1) > EPSILON) {
         throw new Error(`${step.label} branch probabilities must total 100%.`);
       }
