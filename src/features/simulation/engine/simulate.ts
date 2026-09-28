@@ -1,6 +1,6 @@
 import type {
   ProcessConnection,
-  ProcessTask,
+  ProcessStep,
   SimulationResult,
   SimulationSettings,
   TaskSimulationMetric,
@@ -9,7 +9,7 @@ import type {
 interface SimulationEvent {
   at: number;
   transactionId: number;
-  taskId: string;
+  stepId: string;
 }
 
 interface TaskAccumulator {
@@ -76,7 +76,7 @@ class MinHeap {
   }
 }
 
-const EPSILON = 1e-9;
+const EPSILON = 1e-6;
 
 function createSeededRandom(seed: number) {
   let value = seed >>> 0;
@@ -96,66 +96,144 @@ function assertPositiveFinite(value: number, label: string) {
 }
 
 function validateProcess(
-  tasks: ProcessTask[],
+  steps: ProcessStep[],
   connections: ProcessConnection[],
   settings: SimulationSettings,
 ) {
-  if (tasks.length === 0) throw new Error('Add at least one task before running a simulation.');
+  if (steps.length === 0) throw new Error('Add at least one step before running a simulation.');
 
   assertPositiveFinite(settings.monthlyVolume, 'Monthly volume');
   assertPositiveFinite(settings.workdaysPerMonth, 'Workdays per month');
   assertPositiveFinite(settings.hoursPerDay, 'Hours per day');
 
-  const taskIds = new Set<string>();
-  for (const task of tasks) {
-    if (!task.id.trim()) throw new Error('Every task requires an ID.');
-    if (taskIds.has(task.id)) throw new Error(`Duplicate task ID: ${task.id}`);
-    taskIds.add(task.id);
-    assertPositiveFinite(task.durationMinutes, `${task.label} duration`);
-    assertPositiveFinite(task.workers, `${task.label} workers`);
-    if (!Number.isInteger(task.workers)) throw new Error(`${task.label} workers must be a whole number.`);
-    if (!Number.isFinite(task.hourlyCost) || task.hourlyCost < 0) {
-      throw new Error(`${task.label} hourly cost cannot be negative.`);
+  const stepIds = new Set<string>();
+  const startSteps = steps.filter((step) => step.kind === 'start');
+  const endSteps = steps.filter((step) => step.kind === 'end');
+
+  if (startSteps.length !== 1) {
+    throw new Error('The process must contain exactly one Start step.');
+  }
+  if (endSteps.length < 1) {
+    throw new Error('The process must contain at least one End step.');
+  }
+
+  for (const step of steps) {
+    if (!step.id.trim()) throw new Error('Every step requires an ID.');
+    if (stepIds.has(step.id)) throw new Error(`Duplicate step ID: ${step.id}`);
+    stepIds.add(step.id);
+
+    if (step.kind === 'task') {
+      assertPositiveFinite(step.durationMinutes ?? 0, `${step.label} duration`);
+      assertPositiveFinite(step.workers ?? 0, `${step.label} workers`);
+      if (!Number.isInteger(step.workers)) {
+        throw new Error(`${step.label} workers must be a whole number.`);
+      }
+      if (!Number.isFinite(step.hourlyCost) || (step.hourlyCost ?? 0) < 0) {
+        throw new Error(`${step.label} hourly cost cannot be negative.`);
+      }
     }
   }
 
-  const incomingCount = new Map(tasks.map((task) => [task.id, 0]));
-  const adjacency = new Map(tasks.map((task) => [task.id, [] as string[]]));
+  const incoming = new Map(steps.map((step) => [step.id, 0]));
+  const outgoing = new Map(steps.map((step) => [step.id, [] as ProcessConnection[]]));
 
   for (const connection of connections) {
-    if (!taskIds.has(connection.source) || !taskIds.has(connection.target)) {
-      throw new Error('A connection references a task that no longer exists.');
+    if (!stepIds.has(connection.source) || !stepIds.has(connection.target)) {
+      throw new Error('A connection references a step that no longer exists.');
     }
-    adjacency.get(connection.source)?.push(connection.target);
-    incomingCount.set(connection.target, (incomingCount.get(connection.target) ?? 0) + 1);
+    incoming.set(connection.target, (incoming.get(connection.target) ?? 0) + 1);
+    outgoing.get(connection.source)?.push(connection);
   }
 
-  const startTasks = tasks.filter((task) => (incomingCount.get(task.id) ?? 0) === 0);
-  if (startTasks.length !== 1) {
-    throw new Error('The process must have exactly one starting task.');
+  const startStep = startSteps[0];
+  if ((incoming.get(startStep.id) ?? 0) !== 0) {
+    throw new Error('The Start step cannot have an incoming connection.');
   }
 
-  const indegree = new Map(incomingCount);
-  const queue = startTasks.map((task) => task.id);
+  for (const step of steps) {
+    const incomingCount = incoming.get(step.id) ?? 0;
+    const outgoingConnections = outgoing.get(step.id) ?? [];
+
+    if (step.kind !== 'start' && incomingCount === 0) {
+      throw new Error(`${step.label} is disconnected. Connect every step into the process.`);
+    }
+
+    if (step.kind === 'end') {
+      if (outgoingConnections.length > 0) {
+        throw new Error('End steps cannot have outgoing connections.');
+      }
+      continue;
+    }
+
+    if (outgoingConnections.length === 0) {
+      throw new Error(`${step.label} needs an outgoing connection.`);
+    }
+
+    if (step.kind !== 'decision' && outgoingConnections.length > 1) {
+      throw new Error(`${step.label} has multiple outgoing routes. Add a Decision step before branching.`);
+    }
+
+    if (step.kind === 'decision') {
+      if (outgoingConnections.length < 2) {
+        throw new Error(`${step.label} needs at least two branches.`);
+      }
+
+      const probabilities = outgoingConnections.map((connection) => connection.probability);
+      if (probabilities.some((probability) => probability === undefined)) {
+        throw new Error(`${step.label} requires a probability on every branch.`);
+      }
+
+      const total = probabilities.reduce((sum, probability) => sum + (probability ?? 0), 0);
+      if (Math.abs(total - 1) > EPSILON) {
+        throw new Error(`${step.label} branch probabilities must total 100%.`);
+      }
+
+      if (probabilities.some((probability) => (probability ?? 0) <= 0)) {
+        throw new Error(`${step.label} branch probabilities must be greater than 0%.`);
+      }
+    }
+  }
+
+  const reachable = new Set<string>();
+  const stack = [startStep.id];
+
+  while (stack.length > 0) {
+    const stepId = stack.pop();
+    if (!stepId || reachable.has(stepId)) continue;
+    reachable.add(stepId);
+
+    for (const connection of outgoing.get(stepId) ?? []) {
+      stack.push(connection.target);
+    }
+  }
+
+  if (reachable.size !== steps.length) {
+    throw new Error('Every step must be reachable from Start.');
+  }
+
+  const indegree = new Map(incoming);
+  const topologicalQueue = steps
+    .filter((step) => (indegree.get(step.id) ?? 0) === 0)
+    .map((step) => step.id);
   let visited = 0;
 
-  while (queue.length > 0) {
-    const taskId = queue.shift();
-    if (!taskId) continue;
+  while (topologicalQueue.length > 0) {
+    const stepId = topologicalQueue.shift();
+    if (!stepId) continue;
     visited += 1;
 
-    for (const next of adjacency.get(taskId) ?? []) {
-      const nextDegree = (indegree.get(next) ?? 0) - 1;
-      indegree.set(next, nextDegree);
-      if (nextDegree === 0) queue.push(next);
+    for (const connection of outgoing.get(stepId) ?? []) {
+      const nextDegree = (indegree.get(connection.target) ?? 0) - 1;
+      indegree.set(connection.target, nextDegree);
+      if (nextDegree === 0) topologicalQueue.push(connection.target);
     }
   }
 
-  if (visited !== tasks.length) {
+  if (visited !== steps.length) {
     throw new Error('Cycles are not supported yet. Remove the loop before running the simulation.');
   }
 
-  return startTasks[0].id;
+  return startStep.id;
 }
 
 function chooseNextConnection(
@@ -165,48 +243,41 @@ function chooseNextConnection(
   if (outgoing.length === 0) return undefined;
   if (outgoing.length === 1) return outgoing[0];
 
-  const allProbabilitiesSpecified = outgoing.every(
-    (connection) => connection.probability !== undefined,
-  );
-
-  const weighted = allProbabilitiesSpecified
-    ? outgoing.map((connection) => connection.probability ?? 0)
-    : outgoing.map(() => 1 / outgoing.length);
-
-  const total = weighted.reduce((sum, weight) => sum + weight, 0);
-  if (total <= EPSILON) throw new Error('Branch probabilities must add up to more than zero.');
-
-  let cursor = random() * total;
-  for (let index = 0; index < outgoing.length; index += 1) {
-    cursor -= weighted[index];
-    if (cursor <= 0) return outgoing[index];
+  let cursor = random();
+  for (const connection of outgoing) {
+    cursor -= connection.probability ?? 0;
+    if (cursor <= 0) return connection;
   }
 
   return outgoing[outgoing.length - 1];
 }
 
 export function simulateProcess(
-  tasks: ProcessTask[],
+  steps: ProcessStep[],
   connections: ProcessConnection[],
   settings: SimulationSettings,
 ): SimulationResult {
-  const startTaskId = validateProcess(tasks, connections, settings);
+  const startStepId = validateProcess(steps, connections, settings);
   const transactionCount = Math.max(1, Math.floor(settings.monthlyVolume));
   const horizonMinutes = settings.workdaysPerMonth * settings.hoursPerDay * 60;
   const random = createSeededRandom(settings.seed ?? 20260928);
 
-  const taskById = new Map(tasks.map((task) => [task.id, task]));
-  const outgoingByTask = new Map(tasks.map((task) => [task.id, [] as ProcessConnection[]]));
+  const stepById = new Map(steps.map((step) => [step.id, step]));
+  const outgoingByStep = new Map(steps.map((step) => [step.id, [] as ProcessConnection[]]));
   for (const connection of connections) {
-    outgoingByTask.get(connection.source)?.push(connection);
+    outgoingByStep.get(connection.source)?.push(connection);
   }
 
+  const taskSteps = steps.filter((step) => step.kind === 'task');
   const workerAvailability = new Map(
-    tasks.map((task) => [task.id, Array.from({ length: task.workers }, () => 0)]),
+    taskSteps.map((step) => [
+      step.id,
+      Array.from({ length: step.workers ?? 1 }, () => 0),
+    ]),
   );
   const taskAccumulators = new Map<string, TaskAccumulator>(
-    tasks.map((task) => [
-      task.id,
+    taskSteps.map((step) => [
+      step.id,
       { visits: 0, busyMinutes: 0, queueMinutes: 0, processingCost: 0 },
     ]),
   );
@@ -218,7 +289,7 @@ export function simulateProcess(
 
   const eventQueue = new MinHeap();
   arrivals.forEach((arrival, transactionId) => {
-    eventQueue.push({ at: arrival, transactionId, taskId: startTaskId });
+    eventQueue.push({ at: arrival, transactionId, stepId: startStepId });
   });
 
   const completionTimes = new Array<number>(transactionCount).fill(Number.NaN);
@@ -228,36 +299,61 @@ export function simulateProcess(
     const event = eventQueue.pop();
     if (!event) break;
 
-    const task = taskById.get(event.taskId);
-    const workers = workerAvailability.get(event.taskId);
-    const accumulator = taskAccumulators.get(event.taskId);
-    if (!task || !workers || !accumulator) continue;
+    const step = stepById.get(event.stepId);
+    if (!step) continue;
+
+    if (step.kind === 'end') {
+      completionTimes[event.transactionId] = event.at;
+      continue;
+    }
+
+    if (step.kind === 'start' || step.kind === 'decision') {
+      const nextConnection = chooseNextConnection(
+        outgoingByStep.get(step.id) ?? [],
+        random,
+      );
+      if (nextConnection) {
+        eventQueue.push({
+          at: event.at,
+          transactionId: event.transactionId,
+          stepId: nextConnection.target,
+        });
+      }
+      continue;
+    }
+
+    const workers = workerAvailability.get(step.id);
+    const accumulator = taskAccumulators.get(step.id);
+    if (!workers || !accumulator) continue;
 
     let workerIndex = 0;
     for (let index = 1; index < workers.length; index += 1) {
       if (workers[index] < workers[workerIndex]) workerIndex = index;
     }
 
+    const durationMinutes = step.durationMinutes ?? 0;
+    const hourlyCost = step.hourlyCost ?? 0;
     const startsAt = Math.max(event.at, workers[workerIndex]);
     const queueMinutes = startsAt - event.at;
-    const finishesAt = startsAt + task.durationMinutes;
+    const finishesAt = startsAt + durationMinutes;
     workers[workerIndex] = finishesAt;
 
     accumulator.visits += 1;
-    accumulator.busyMinutes += task.durationMinutes;
+    accumulator.busyMinutes += durationMinutes;
     accumulator.queueMinutes += queueMinutes;
-    accumulator.processingCost += (task.durationMinutes / 60) * task.hourlyCost;
+    accumulator.processingCost += (durationMinutes / 60) * hourlyCost;
     totalQueueMinutes += queueMinutes;
 
-    const nextConnection = chooseNextConnection(outgoingByTask.get(task.id) ?? [], random);
+    const nextConnection = chooseNextConnection(
+      outgoingByStep.get(step.id) ?? [],
+      random,
+    );
     if (nextConnection) {
       eventQueue.push({
         at: finishesAt,
         transactionId: event.transactionId,
-        taskId: nextConnection.target,
+        stepId: nextConnection.target,
       });
-    } else {
-      completionTimes[event.transactionId] = finishesAt;
     }
   }
 
@@ -271,24 +367,26 @@ export function simulateProcess(
     return sum + (completion - arrivals[transactionId]);
   }, 0);
 
-  const taskMetrics: TaskSimulationMetric[] = tasks.map((task) => {
-    const accumulator = taskAccumulators.get(task.id) ?? {
+  const taskMetrics: TaskSimulationMetric[] = taskSteps.map((step) => {
+    const accumulator = taskAccumulators.get(step.id) ?? {
       visits: 0,
       busyMinutes: 0,
       queueMinutes: 0,
       processingCost: 0,
     };
-    const availableMinutes = task.workers * horizonMinutes;
+    const workers = step.workers ?? 1;
+    const durationMinutes = step.durationMinutes ?? 1;
+    const availableMinutes = workers * horizonMinutes;
 
     return {
-      taskId: task.id,
-      label: task.label,
+      taskId: step.id,
+      label: step.label,
       visits: accumulator.visits,
       busyMinutes: accumulator.busyMinutes,
       averageQueueMinutes:
         accumulator.visits > 0 ? accumulator.queueMinutes / accumulator.visits : 0,
       workloadRatio: availableMinutes > 0 ? accumulator.busyMinutes / availableMinutes : 0,
-      monthlyCapacity: Math.floor(availableMinutes / task.durationMinutes),
+      monthlyCapacity: Math.floor(availableMinutes / durationMinutes),
       processingCost: accumulator.processingCost,
     };
   });
