@@ -34,6 +34,17 @@ describe('simulateProcess', () => {
     expect(result.totalProcessingCost).toBeGreaterThan(0);
     expect(result.taskMetrics).toHaveLength(3);
     expect(result.taskMetrics.find((metric) => metric.taskId === 'approve')?.visits).toBeGreaterThan(0);
+
+    const approvalRoute = result.routeMetrics.find(
+      (metric) => metric.source === 'decision' && metric.target === 'approve',
+    );
+    const directRoute = result.routeMetrics.find(
+      (metric) => metric.source === 'decision' && metric.target === 'enter',
+    );
+
+    expect(approvalRoute?.visits).toBeGreaterThan(0);
+    expect(directRoute?.visits).toBeGreaterThan(0);
+    expect((approvalRoute?.visits ?? 0) + (directRoute?.visits ?? 0)).toBe(800);
   });
 
   it('reports backlog when a task is overloaded', () => {
