@@ -507,9 +507,9 @@ export function simulateProcess(
 
   const traceKindOrder: Record<SimulationTraceEvent['kind'], number> = {
     arrive: 0,
-    queue: 1,
-    finish: 2,
-    route: 3,
+    finish: 1,
+    route: 2,
+    queue: 3,
     start: 4,
     complete: 5,
   };
