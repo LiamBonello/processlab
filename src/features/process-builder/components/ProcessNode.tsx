@@ -131,14 +131,17 @@ export function ProcessNode({ data, selected }: NodeProps<ProcessFlowNode>) {
         </Typography>
       ) : null}
 
-      {data.playback ? (
+      {data.playback &&
+      (data.kind !== 'task' ||
+        data.playback.queued > 0 ||
+        data.playback.processing > 0) ? (
         <Stack direction="row" spacing={0.65} mt={1} flexWrap="wrap" useFlexGap>
           {data.kind === 'task' && data.playback.queued > 0 ? (
             <Chip
               size="small"
               color="warning"
               variant="outlined"
-              label={`Queue ${data.playback.queued}`}
+              label={`Sample queue ${data.playback.queued}`}
               sx={{ height: 22 }}
             />
           ) : null}
@@ -146,7 +149,7 @@ export function ProcessNode({ data, selected }: NodeProps<ProcessFlowNode>) {
             <Chip
               size="small"
               color="primary"
-              label={`Processing ${data.playback.processing}`}
+              label={`Sample active ${data.playback.processing}`}
               sx={{ height: 22 }}
             />
           ) : null}
