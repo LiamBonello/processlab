@@ -6,14 +6,28 @@ The core product is intentionally independent of third-party business data and A
 
 ## Current prototype
 
-- Visual drag-and-connect process builder
+### Workflow builder
+
+- Explicit Start, Task, Decision and End steps
+- Visual drag-and-connect process editor
+- Smart task insertion into an existing connection
+- Smart decision insertion with two valid 50/50 branches
+- Weighted decision branches with editable probabilities
+- Automatic branch rebalancing to 100%
+- Start and End connection constraints
+- Decision-only branching rules
 - Editable task duration, worker count and hourly cost
-- Configurable monthly transaction volume and working capacity
+
+### Simulation
+
 - Seeded discrete-event simulation engine
 - Queueing, workload, monthly capacity and processing-cost metrics
-- Bottleneck detection
+- Weighted routing through decision branches
+- Bottleneck detection and canvas highlighting
 - Backlog detection when workload exceeds monthly capacity
-- Unit tests for the simulation engine
+- Animated connections when a simulation runs
+- Baseline saving and What If scenario comparison
+- Unit tests for workflow validation and simulation behaviour
 
 ## Stack
 
@@ -55,12 +69,14 @@ src/
 
 The simulation engine has no dependency on React, Next.js, Material UI or React Flow. UI graph data is mapped into engine types at the feature boundary so that simulation logic remains portable and testable.
 
-## Simulation assumptions in v0.1
+## Simulation assumptions in v0.2
 
-- Exactly one starting task is required.
-- Cyclic workflows are rejected for now.
-- Multiple outgoing connections are treated as equally likely unless probabilities are supplied by a future UI.
+- A workflow must contain exactly one Start step and at least one End step.
+- Every non-End step must lead somewhere and every non-Start step must be connected into the process.
+- Only Decision steps may branch to multiple outgoing routes.
+- Decision branch probabilities must total exactly 100%.
+- Cyclic workflows and rework loops are rejected for now.
 - Working time is represented as compressed monthly business minutes. Nights, weekends and shift calendars are not modelled yet.
-- Processing cost currently represents task labour consumed, not fixed monthly salary cost.
+- Processing cost represents task labour consumed, not fixed monthly salary cost.
 
-These constraints are deliberate. Later versions can add calendars, conditional branching, rework loops, fixed staffing cost, scenarios and richer stochastic distributions without coupling them to the UI.
+These constraints are deliberate. Later versions can add calendars, shifts, rework loops, richer stochastic distributions, fixed staffing cost, reusable templates and more advanced scenario management without coupling those concerns to the UI.
