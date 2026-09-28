@@ -753,12 +753,28 @@ export function ProcessBuilder() {
     clearResult();
   }, [clearResult, edges, selectedNode, setEdges, setNodes]);
 
-  const replaySimulation = useCallback(() => {
+  const togglePlayback = useCallback(() => {
     if (!result) return;
 
-    setIsAnimating(true);
-    if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
-    animationTimeoutRef.current = setTimeout(() => setIsAnimating(false), 4200);
+    if (playbackStatus === 'playing') {
+      setPlaybackStatus('paused');
+      return;
+    }
+
+    if (playbackStatus === 'finished') {
+      playbackProgressRef.current = 0;
+      setPlaybackProgress(0);
+    }
+
+    setPlaybackStatus('playing');
+  }, [playbackStatus, result]);
+
+  const restartPlayback = useCallback(() => {
+    if (!result) return;
+
+    playbackProgressRef.current = 0;
+    setPlaybackProgress(0);
+    setPlaybackStatus('playing');
   }, [result]);
 
   const runSimulation = useCallback(() => {
@@ -809,12 +825,14 @@ export function ProcessBuilder() {
         }),
       );
 
-      setIsAnimating(true);
-      if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
-      animationTimeoutRef.current = setTimeout(() => setIsAnimating(false), 4200);
+      playbackProgressRef.current = 0;
+      setPlaybackProgress(0);
+      setPlaybackStatus('playing');
     } catch (error) {
       setResult(null);
-      setIsAnimating(false);
+      playbackProgressRef.current = 0;
+      setPlaybackProgress(0);
+      setPlaybackStatus('idle');
       setSimulationError(error instanceof Error ? error.message : 'Unable to run the simulation.');
     }
   }, [edges, hoursPerDay, monthlyVolume, nodes, setNodes, workdaysPerMonth]);
@@ -840,7 +858,7 @@ export function ProcessBuilder() {
             <Stack direction="row" alignItems="center" spacing={1}>
               <ScienceRoundedIcon color="primary" />
               <Typography variant="h4">ProcessLab</Typography>
-              <Chip size="small" label="v0.3" variant="outlined" />
+              <Chip size="small" label="v0.4" variant="outlined" />
             </Stack>
             <Typography color="text.secondary" mt={0.5}>
               Build the process, run the numbers, find the bottleneck.
@@ -873,7 +891,7 @@ export function ProcessBuilder() {
             }}
           >
             <ReactFlow<ProcessFlowNode, ProcessFlowEdge>
-              nodes={nodes}
+              nodes={displayNodes}
               edges={renderedEdges}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
