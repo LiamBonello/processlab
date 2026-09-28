@@ -20,7 +20,7 @@ body {
 @media print {
   @page {
     size: A4 landscape;
-    margin: 12mm;
+    margin: 10mm;
   }
 
   html,
@@ -30,17 +30,60 @@ body {
   }
 
   body {
+    margin: 0 !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
 
   .processlab-no-print,
+  .processlab-report-controls,
   .react-flow__attribution {
     display: none !important;
   }
 
   .processlab-print-report,
-  .processlab-print-report * {
-    break-inside: avoid;
+  .processlab-print-section {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    background: #fff !important;
+    color: #111 !important;
+    border: 1px solid #d9dce3 !important;
+    box-shadow: none !important;
+  }
+
+  .processlab-print-section {
+    margin-top: 6mm !important;
+  }
+
+  .processlab-print-report .MuiTypography-root,
+  .processlab-print-section .MuiTypography-root {
+    color: #111 !important;
+  }
+
+  .processlab-print-report .MuiDivider-root,
+  .processlab-print-section .MuiDivider-root {
+    border-color: #d9dce3 !important;
+  }
+
+  .processlab-print-metrics,
+  .processlab-print-task-row,
+  .processlab-print-section .MuiAlert-root {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .processlab-print-task-row {
+    background: #f5f6f8 !important;
+    padding: 7px 10px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .processlab-print-section .MuiAlert-root {
+    background: #fff !important;
+  }
+
+  .processlab-print-report .MuiChip-root,
+  .processlab-print-section .MuiChip-root {
+    color: #111 !important;
   }
 }
