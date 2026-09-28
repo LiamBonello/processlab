@@ -131,6 +131,43 @@ export function ProcessNode({ data, selected }: NodeProps<ProcessFlowNode>) {
         </Typography>
       ) : null}
 
+      {data.playback ? (
+        <Stack direction="row" spacing={0.65} mt={1} flexWrap="wrap" useFlexGap>
+          {data.kind === 'task' && data.playback.queued > 0 ? (
+            <Chip
+              size="small"
+              color="warning"
+              variant="outlined"
+              label={`Queue ${data.playback.queued}`}
+              sx={{ height: 22 }}
+            />
+          ) : null}
+          {data.kind === 'task' && data.playback.processing > 0 ? (
+            <Chip
+              size="small"
+              color="primary"
+              label={`Processing ${data.playback.processing}`}
+              sx={{ height: 22 }}
+            />
+          ) : null}
+          {data.kind === 'start' && data.playback.traversed > 0 ? (
+            <Typography variant="caption" color="success.main">
+              {data.playback.traversed} sampled arrivals
+            </Typography>
+          ) : null}
+          {data.kind === 'decision' && data.playback.traversed > 0 ? (
+            <Typography variant="caption" color="secondary.main">
+              {data.playback.traversed} sampled routed
+            </Typography>
+          ) : null}
+          {data.kind === 'end' && data.playback.completed > 0 ? (
+            <Typography variant="caption" color="success.main">
+              {data.playback.completed} sampled completed
+            </Typography>
+          ) : null}
+        </Stack>
+      ) : null}
+
       {canSend ? <Handle type="source" position={Position.Right} /> : null}
     </Box>
   );
