@@ -5,19 +5,29 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
 import CallSplitRoundedIcon from '@mui/icons-material/CallSplitRounded';
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
+import FileDownloadRoundedIcon from '@mui/icons-material/FileDownloadRounded';
+import FolderOpenRoundedIcon from '@mui/icons-material/FolderOpenRounded';
 import PauseRoundedIcon from '@mui/icons-material/PauseRounded';
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
+import PrintRoundedIcon from '@mui/icons-material/PrintRounded';
 import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
 import ScienceRoundedIcon from '@mui/icons-material/ScienceRounded';
+import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded';
+import UploadFileRoundedIcon from '@mui/icons-material/UploadFileRounded';
 import {
   Alert,
   Box,
   Button,
   ButtonGroup,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
   LinearProgress,
+  MenuItem,
   Paper,
   Stack,
   TextField,
@@ -37,76 +47,39 @@ import {
   type EdgeTypes,
   type NodeTypes,
 } from '@xyflow/react';
+import { InsightsPanel } from './components/InsightsPanel';
 import { ProcessNode } from './components/ProcessNode';
+import { ScenarioPanel } from './components/ScenarioPanel';
 import { SimulationEdge } from './components/SimulationEdge';
+import { StressTestPanel } from './components/StressTestPanel';
 import type { ProcessFlowEdge, ProcessFlowNode } from './process-builder.types';
+import {
+  blankProcessTemplate,
+  cloneTemplate,
+  processTemplates,
+  type ProcessTemplate,
+} from './templates';
+import {
+  createWorkspace,
+  parseWorkspace,
+  WORKSPACE_STORAGE_KEY,
+  type ScenarioSnapshot,
+} from './workspace';
+import { buildSimulationInsights } from '@/features/simulation/analysis';
 import { simulateProcess } from '@/features/simulation/engine/simulate';
-import type { SimulationResult } from '@/features/simulation/engine/types';
+import type {
+  ProcessConnection,
+  ProcessStep,
+  SimulationResult,
+} from '@/features/simulation/engine/types';
+import {
+  runVolumeStressTest,
+  type StressTestResult,
+} from '@/features/simulation/stress-test';
 
-const initialNodes: ProcessFlowNode[] = [
-  {
-    id: 'start',
-    type: 'process',
-    position: { x: 40, y: 220 },
-    data: { label: 'Invoice received', kind: 'start', durationMinutes: 0, workers: 0, hourlyCost: 0 },
-  },
-  {
-    id: 'check-invoice',
-    type: 'process',
-    position: { x: 270, y: 220 },
-    data: { label: 'Check invoice', kind: 'task', durationMinutes: 5, workers: 2, hourlyCost: 22 },
-  },
-  {
-    id: 'needs-approval',
-    type: 'process',
-    position: { x: 560, y: 220 },
-    data: { label: 'Needs approval?', kind: 'decision', durationMinutes: 0, workers: 0, hourlyCost: 0 },
-  },
-  {
-    id: 'manager-approval',
-    type: 'process',
-    position: { x: 850, y: 80 },
-    data: { label: 'Manager approval', kind: 'task', durationMinutes: 8, workers: 1, hourlyCost: 35 },
-  },
-  {
-    id: 'enter-system',
-    type: 'process',
-    position: { x: 1120, y: 220 },
-    data: { label: 'Enter into system', kind: 'task', durationMinutes: 4, workers: 1, hourlyCost: 22 },
-  },
-  {
-    id: 'payment',
-    type: 'process',
-    position: { x: 1410, y: 220 },
-    data: { label: 'Prepare payment', kind: 'task', durationMinutes: 3, workers: 1, hourlyCost: 24 },
-  },
-  {
-    id: 'end',
-    type: 'process',
-    position: { x: 1710, y: 220 },
-    data: { label: 'Ready for payment', kind: 'end', durationMinutes: 0, workers: 0, hourlyCost: 0 },
-  },
-];
-
-const initialEdges: ProcessFlowEdge[] = [
-  { id: 'e-start-check', source: 'start', target: 'check-invoice', data: {} },
-  { id: 'e-check-decision', source: 'check-invoice', target: 'needs-approval', data: {} },
-  {
-    id: 'e-decision-approval',
-    source: 'needs-approval',
-    target: 'manager-approval',
-    data: { probability: 0.35 },
-  },
-  {
-    id: 'e-decision-enter',
-    source: 'needs-approval',
-    target: 'enter-system',
-    data: { probability: 0.65 },
-  },
-  { id: 'e-approval-enter', source: 'manager-approval', target: 'enter-system', data: {} },
-  { id: 'e-enter-payment', source: 'enter-system', target: 'payment', data: {} },
-  { id: 'e-payment-end', source: 'payment', target: 'end', data: {} },
-];
+const defaultTemplate = cloneTemplate(processTemplates[0]);
+const initialNodes: ProcessFlowNode[] = defaultTemplate.nodes;
+const initialEdges: ProcessFlowEdge[] = defaultTemplate.edges;
 
 const nodeTypes: NodeTypes = { process: ProcessNode };
 const edgeTypes: EdgeTypes = { simulation: SimulationEdge };
@@ -188,17 +161,25 @@ export function ProcessBuilder() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<ProcessFlowEdge>(initialEdges);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>('check-invoice');
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
-  const [monthlyVolume, setMonthlyVolume] = useState(800);
-  const [workdaysPerMonth, setWorkdaysPerMonth] = useState(22);
-  const [hoursPerDay, setHoursPerDay] = useState(8);
+  const [projectName, setProjectName] = useState(defaultTemplate.name);
+  const [monthlyVolume, setMonthlyVolume] = useState(defaultTemplate.monthlyVolume);
+  const [workdaysPerMonth, setWorkdaysPerMonth] = useState(defaultTemplate.workdaysPerMonth);
+  const [hoursPerDay, setHoursPerDay] = useState(defaultTemplate.hoursPerDay);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [baseline, setBaseline] = useState<SimulationResult | null>(null);
+  const [savedScenarios, setSavedScenarios] = useState<ScenarioSnapshot[]>([]);
+  const [stressTestResult, setStressTestResult] = useState<StressTestResult | null>(null);
   const [simulationError, setSimulationError] = useState<string | null>(null);
+  const [workspaceReady, setWorkspaceReady] = useState(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [scenarioDialogOpen, setScenarioDialogOpen] = useState(false);
+  const [scenarioName, setScenarioName] = useState('Scenario 1');
   const [playbackStatus, setPlaybackStatus] = useState<PlaybackStatus>('idle');
   const [playbackProgress, setPlaybackProgress] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const playbackProgressRef = useRef(0);
   const playbackFrameRef = useRef<number | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (playbackStatus !== 'playing' || !result) return;
