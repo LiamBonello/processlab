@@ -124,7 +124,7 @@ function MetricCard({ label, value, detail }: { label: string; value: string; de
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
-      <Typography variant="h6" mt={0.25} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+      <Typography variant="h6" sx={{ mt: 0.25, fontVariantNumeric: 'tabular-nums' }}>
         {value}
       </Typography>
       {detail ? (
@@ -1124,12 +1124,14 @@ export function ProcessBuilder() {
         <Stack
           className="processlab-no-print"
           direction={{ xs: 'column', md: 'row' }}
-          alignItems={{ xs: 'stretch', md: 'center' }}
-          justifyContent="space-between"
-          gap={1.5}
+          sx={{
+            alignItems: { xs: 'stretch', md: 'center' },
+            justifyContent: 'space-between',
+            gap: 1.5,
+          }}
         >
           <Box>
-            <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
+            <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
               <ScienceRoundedIcon color="primary" />
               <Typography variant="h4">ProcessLab</Typography>
               <Chip size="small" label="V1" variant="outlined" />
@@ -1149,7 +1151,7 @@ export function ProcessBuilder() {
             />
           </Box>
 
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
             <Button
               startIcon={<AddRoundedIcon />}
               variant="outlined"
@@ -1203,7 +1205,7 @@ export function ProcessBuilder() {
           className="processlab-no-print"
           direction={{ xs: 'column', xl: 'row' }}
           spacing={2}
-          alignItems="stretch"
+          sx={{ alignItems: 'stretch' }}
         >
           <Paper
             variant="outlined"
@@ -1264,11 +1266,11 @@ export function ProcessBuilder() {
             }}
           >
             <Typography variant="h6">Simulation setup</Typography>
-            <Typography variant="body2" color="text.secondary" mt={0.5}>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               One month is represented as compressed working minutes. No external data is used.
             </Typography>
 
-            <Stack spacing={1.5} mt={2}>
+            <Stack spacing={1.5} sx={{ mt: 2 }}>
               <TextField
                 label="Transactions / month"
                 type="number"
@@ -1307,12 +1309,12 @@ export function ProcessBuilder() {
 
             {selectedNode ? (
               <>
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
                   <Typography variant="h6">Selected step</Typography>
                   <Chip size="small" label={selectedNode.data.kind} variant="outlined" />
                 </Stack>
 
-                <Stack spacing={1.5} mt={2}>
+                <Stack spacing={1.5} sx={{ mt: 2 }}>
                   <TextField
                     label="Step name"
                     value={selectedNode.data.label}
@@ -1414,7 +1416,7 @@ export function ProcessBuilder() {
             ) : selectedEdge ? (
               <>
                 <Typography variant="h6">Selected connection</Typography>
-                <Typography variant="body2" color="text.secondary" mt={1}>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                   Insert a task or decision here using the toolbar above.
                 </Typography>
                 {selectedEdge.data?.probability !== undefined ? (
@@ -1429,7 +1431,7 @@ export function ProcessBuilder() {
             ) : (
               <>
                 <Typography variant="h6">Inspector</Typography>
-                <Typography variant="body2" color="text.secondary" mt={1}>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                   Select a step to edit it, or select a connection to insert a new step exactly where you want it.
                 </Typography>
               </>
@@ -1441,9 +1443,11 @@ export function ProcessBuilder() {
           <Paper className="processlab-print-report" variant="outlined" sx={{ p: 2 }}>
             <Stack
               direction={{ xs: 'column', md: 'row' }}
-              justifyContent="space-between"
-              alignItems={{ xs: 'stretch', md: 'flex-start' }}
-              gap={2}
+              sx={{
+                justifyContent: 'space-between',
+                alignItems: { xs: 'stretch', md: 'flex-start' },
+                gap: 2,
+              }}
             >
               <Box>
                 <Typography variant="overline" color="text.secondary">
@@ -1455,7 +1459,7 @@ export function ProcessBuilder() {
                 </Typography>
               </Box>
 
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
                 {constraintLabel ? (
                   <Chip
                     color={constraintColor}
@@ -1537,9 +1541,11 @@ export function ProcessBuilder() {
             >
               <Stack
                 direction={{ xs: 'column', md: 'row' }}
-                alignItems={{ xs: 'stretch', md: 'center' }}
-                justifyContent="space-between"
-                gap={1.25}
+                sx={{
+                  alignItems: { xs: 'stretch', md: 'center' },
+                  justifyContent: 'space-between',
+                  gap: 1.25,
+                }}
               >
                 <Box>
                   <Typography variant="subtitle2">Sampled transaction replay</Typography>
@@ -1548,7 +1554,7 @@ export function ProcessBuilder() {
                   </Typography>
                 </Box>
 
-                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
                   <Typography variant="caption" color="text.secondary">
                     Speed
                   </Typography>
@@ -1588,7 +1594,7 @@ export function ProcessBuilder() {
 
             <Divider sx={{ my: 2 }} />
 
-            <Stack direction="row" flexWrap="wrap" gap={3}>
+            <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 3 }}>
               <Box sx={{ minWidth: 0, flex: '1 1 180px' }}>
                 <MetricCard
                   label="Processing cost"
@@ -1596,7 +1602,7 @@ export function ProcessBuilder() {
                   detail={`${currencyFormatter.format(result.costPerTransaction)} / transaction`}
                 />
                 {baseline ? (
-                  <Box mt={1}>
+                  <Box sx={{ mt: 1 }}>
                     <ComparisonChip
                       current={result.totalProcessingCost}
                       baseline={baseline.totalProcessingCost}
@@ -1608,7 +1614,7 @@ export function ProcessBuilder() {
               <Box sx={{ minWidth: 0, flex: '1 1 180px' }}>
                 <MetricCard label="Average cycle" value={formatDuration(result.averageCycleMinutes)} />
                 {baseline ? (
-                  <Box mt={1}>
+                  <Box sx={{ mt: 1 }}>
                     <ComparisonChip
                       current={result.averageCycleMinutes}
                       baseline={baseline.averageCycleMinutes}
@@ -1620,7 +1626,7 @@ export function ProcessBuilder() {
               <Box sx={{ minWidth: 0, flex: '1 1 180px' }}>
                 <MetricCard label="Average queue" value={formatDuration(result.averageQueueMinutes)} />
                 {baseline ? (
-                  <Box mt={1}>
+                  <Box sx={{ mt: 1 }}>
                     <ComparisonChip
                       current={result.averageQueueMinutes}
                       baseline={baseline.averageQueueMinutes}
@@ -1636,7 +1642,7 @@ export function ProcessBuilder() {
                   detail={`${result.backlogAtMonthEnd.toLocaleString()} month-end carryover`}
                 />
                 {baseline ? (
-                  <Box mt={1}>
+                  <Box sx={{ mt: 1 }}>
                     <ComparisonChip
                       current={result.throughputWithinMonth}
                       baseline={baseline.throughputWithinMonth}
@@ -1654,9 +1660,9 @@ export function ProcessBuilder() {
                 <Stack
                   key={metric.taskId}
                   direction={{ xs: 'column', md: 'row' }}
-                  alignItems={{ xs: 'stretch', md: 'center' }}
-                  gap={1}
                   sx={(theme) => ({
+                    alignItems: { xs: 'stretch', md: 'center' },
+                    gap: 1,
                     px: 1.5,
                     py: 1.2,
                     borderRadius: 1.5,
@@ -1667,7 +1673,7 @@ export function ProcessBuilder() {
                         : alpha(theme.palette.common.white, 0.025),
                   })}
                 >
-                  <Typography fontWeight={650} sx={{ flex: '1 1 240px' }}>
+                  <Typography sx={{ flex: '1 1 240px', fontWeight: 650 }}>
                     {metric.label}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ minWidth: 105 }}>
@@ -1730,7 +1736,7 @@ export function ProcessBuilder() {
                 }}
               >
                 <Box>
-                  <Typography fontWeight={700}>{template.name}</Typography>
+                  <Typography sx={{ fontWeight: 700 }}>{template.name}</Typography>
                   <Typography variant="body2" color="text.secondary">
                     {template.description}
                   </Typography>
