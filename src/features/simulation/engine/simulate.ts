@@ -3,6 +3,7 @@ import type {
   ProcessStep,
   SimulationResult,
   SimulationSettings,
+  SimulationTraceEvent,
   TaskSimulationMetric,
 } from './types';
 
@@ -241,6 +242,22 @@ function validateProcess(
   return startStep.id;
 }
 
+function selectTraceTransactions(transactionCount: number, maxSamples = 24) {
+  const sampleCount = Math.min(transactionCount, maxSamples);
+  if (sampleCount <= 0) return [];
+
+  if (sampleCount === 1) return [0];
+
+  const ids = new Set<number>();
+  for (let index = 0; index < sampleCount; index += 1) {
+    ids.add(
+      Math.round((index * (transactionCount - 1)) / (sampleCount - 1)),
+    );
+  }
+
+  return [...ids].sort((a, b) => a - b);
+}
+
 function chooseNextConnection(
   outgoing: ProcessConnection[],
   random: () => number,
@@ -299,9 +316,25 @@ export function simulateProcess(
     return index * bucketSize + random() * bucketSize;
   });
 
+  const sampledTransactionIds = selectTraceTransactions(transactionCount);
+  const sampledTransactionIdSet = new Set(sampledTransactionIds);
+  const traceEvents: SimulationTraceEvent[] = [];
+
+  const recordTrace = (event: SimulationTraceEvent) => {
+    if (sampledTransactionIdSet.has(event.transactionId)) {
+      traceEvents.push(event);
+    }
+  };
+
   const eventQueue = new MinHeap();
   arrivals.forEach((arrival, transactionId) => {
     eventQueue.push({ at: arrival, transactionId, stepId: startStepId });
+    recordTrace({
+      at: arrival,
+      transactionId,
+      kind: 'arrive',
+      stepId: startStepId,
+    });
   });
 
   const completionTimes = new Array<number>(transactionCount).fill(Number.NaN);
@@ -316,6 +349,12 @@ export function simulateProcess(
 
     if (step.kind === 'end') {
       completionTimes[event.transactionId] = event.at;
+      recordTrace({
+        at: event.at,
+        transactionId: event.transactionId,
+        kind: 'complete',
+        stepId: step.id,
+      });
       continue;
     }
 
@@ -327,6 +366,14 @@ export function simulateProcess(
       if (nextConnection) {
         const routeKey = `${nextConnection.source}::${nextConnection.target}`;
         routeVisits.set(routeKey, (routeVisits.get(routeKey) ?? 0) + 1);
+        recordTrace({
+          at: event.at,
+          transactionId: event.transactionId,
+          kind: 'route',
+          stepId: nextConnection.target,
+          fromStepId: nextConnection.source,
+          toStepId: nextConnection.target,
+        });
         eventQueue.push({
           at: event.at,
           transactionId: event.transactionId,
@@ -352,6 +399,31 @@ export function simulateProcess(
     const finishesAt = startsAt + durationMinutes;
     workers[workerIndex] = finishesAt;
 
+    if (queueMinutes > EPSILON) {
+      recordTrace({
+        at: event.at,
+        transactionId: event.transactionId,
+        kind: 'queue',
+        stepId: step.id,
+        queueMinutes,
+      });
+    }
+
+    recordTrace({
+      at: startsAt,
+      transactionId: event.transactionId,
+      kind: 'start',
+      stepId: step.id,
+      queueMinutes,
+    });
+
+    recordTrace({
+      at: finishesAt,
+      transactionId: event.transactionId,
+      kind: 'finish',
+      stepId: step.id,
+    });
+
     accumulator.visits += 1;
     accumulator.busyMinutes += durationMinutes;
     accumulator.queueMinutes += queueMinutes;
@@ -365,6 +437,14 @@ export function simulateProcess(
     if (nextConnection) {
       const routeKey = `${nextConnection.source}::${nextConnection.target}`;
       routeVisits.set(routeKey, (routeVisits.get(routeKey) ?? 0) + 1);
+      recordTrace({
+        at: finishesAt,
+        transactionId: event.transactionId,
+        kind: 'route',
+        stepId: nextConnection.target,
+        fromStepId: nextConnection.source,
+        toStepId: nextConnection.target,
+      });
       eventQueue.push({
         at: finishesAt,
         transactionId: event.transactionId,
@@ -425,6 +505,29 @@ export function simulateProcess(
     probability: connection.probability,
   }));
 
+  const traceKindOrder: Record<SimulationTraceEvent['kind'], number> = {
+    arrive: 0,
+    queue: 1,
+    finish: 2,
+    route: 3,
+    start: 4,
+    complete: 5,
+  };
+
+  traceEvents.sort(
+    (left, right) =>
+      left.at - right.at ||
+      traceKindOrder[left.kind] - traceKindOrder[right.kind] ||
+      left.transactionId - right.transactionId,
+  );
+
+  const trace = {
+    sampledTransactionIds,
+    events: traceEvents,
+    startAt: traceEvents[0]?.at ?? 0,
+    endAt: traceEvents[traceEvents.length - 1]?.at ?? 0,
+  };
+
   return {
     transactions: transactionCount,
     completedTransactions: completed.length,
@@ -438,5 +541,6 @@ export function simulateProcess(
     bottleneckLabel: bottleneck?.label ?? null,
     taskMetrics,
     routeMetrics,
+    trace,
   };
 }
