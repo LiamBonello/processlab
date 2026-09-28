@@ -276,6 +276,104 @@ export function ProcessBuilder() {
         ? 'warning'
         : 'default';
 
+  const traceSpan = Math.max(
+    1,
+    (result?.trace.endAt ?? 0) - (result?.trace.startAt ?? 0),
+  );
+  const playbackTime =
+    (result?.trace.startAt ?? 0) + playbackProgress * traceSpan;
+
+  const playbackNodeState = useMemo(() => {
+    const state = new Map<
+      string,
+      { queued: number; processing: number; traversed: number; completed: number }
+    >();
+
+    if (!result || playbackStatus === 'idle') return state;
+
+    const getState = (stepId: string) => {
+      const existing = state.get(stepId);
+      if (existing) return existing;
+
+      const created = {
+        queued: 0,
+        processing: 0,
+        traversed: 0,
+        completed: 0,
+      };
+      state.set(stepId, created);
+      return created;
+    };
+
+    for (const event of result.trace.events) {
+      if (event.at > playbackTime) break;
+
+      if (event.kind === 'arrive') {
+        getState(event.stepId).traversed += 1;
+      } else if (event.kind === 'queue') {
+        getState(event.stepId).queued += 1;
+      } else if (event.kind === 'start') {
+        const stepState = getState(event.stepId);
+        if ((event.queueMinutes ?? 0) > 0) {
+          stepState.queued = Math.max(0, stepState.queued - 1);
+        }
+        stepState.processing += 1;
+        stepState.traversed += 1;
+      } else if (event.kind === 'finish') {
+        const stepState = getState(event.stepId);
+        stepState.processing = Math.max(0, stepState.processing - 1);
+      } else if (event.kind === 'route' && event.fromStepId) {
+        const sourceNode = nodes.find((node) => node.id === event.fromStepId);
+        if (sourceNode?.data.kind === 'decision') {
+          getState(event.fromStepId).traversed += 1;
+        }
+      } else if (event.kind === 'complete') {
+        getState(event.stepId).completed += 1;
+      }
+    }
+
+    return state;
+  }, [nodes, playbackStatus, playbackTime, result]);
+
+  const displayNodes = useMemo(
+    () =>
+      nodes.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          playback: playbackNodeState.get(node.id),
+        },
+      })),
+    [nodes, playbackNodeState],
+  );
+
+  const activeRouteTraceIds = useMemo(() => {
+    const active = new Map<string, string[]>();
+
+    if (!result || playbackStatus !== 'playing') return active;
+
+    const windowProgress = Math.min(0.2, 0.05 * playbackSpeed);
+    const windowStart = Math.max(0, playbackProgress - windowProgress);
+
+    for (const event of result.trace.events) {
+      if (event.kind !== 'route' || !event.fromStepId || !event.toStepId) continue;
+
+      const eventProgress = Math.max(
+        0,
+        Math.min(1, (event.at - result.trace.startAt) / traceSpan),
+      );
+
+      if (eventProgress > playbackProgress || eventProgress < windowStart) continue;
+
+      const key = `${event.fromStepId}::${event.toStepId}`;
+      const ids = active.get(key) ?? [];
+      ids.push(`${event.transactionId}-${event.at}`);
+      active.set(key, ids);
+    }
+
+    return active;
+  }, [playbackProgress, playbackSpeed, playbackStatus, result, traceSpan]);
+
   const renderedEdges = useMemo(() => {
     const routeMetrics = new Map(
       (result?.routeMetrics ?? []).map((metric) => [
@@ -285,7 +383,9 @@ export function ProcessBuilder() {
     );
 
     return edges.map((edge) => {
-      const metric = routeMetrics.get(`${edge.source}::${edge.target}`);
+      const routeKey = `${edge.source}::${edge.target}`;
+      const metric = routeMetrics.get(routeKey);
+      const activeTraceIds = activeRouteTraceIds.get(routeKey) ?? [];
 
       return {
         ...edge,
@@ -293,19 +393,23 @@ export function ProcessBuilder() {
         data: {
           ...edge.data,
           simulationVisits: metric?.visits,
-          isPlaying: isAnimating,
+          activeTraceIds,
+          playbackSpeed,
         },
         style: {
           ...edge.style,
-          strokeWidth: isAnimating ? 2.2 : 1.7,
+          strokeWidth: activeTraceIds.length > 0 ? 2.4 : 1.7,
         },
       };
     });
-  }, [edges, isAnimating, result]);
+  }, [activeRouteTraceIds, edges, playbackSpeed, result]);
 
   const clearResult = useCallback(() => {
     setResult(null);
     setSimulationError(null);
+    playbackProgressRef.current = 0;
+    setPlaybackProgress(0);
+    setPlaybackStatus('idle');
     setNodes((currentNodes) =>
       currentNodes.map((node) =>
         node.data.isBottleneck || node.data.simulation
