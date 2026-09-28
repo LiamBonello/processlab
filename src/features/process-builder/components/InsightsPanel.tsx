@@ -29,7 +29,7 @@ export function InsightsPanel({
   insights: SimulationInsight[];
 }) {
   return (
-    <Paper variant="outlined" sx={{ p: 2 }}>
+    <Paper className="processlab-print-section" variant="outlined" sx={{ p: 2 }}>
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
         <LightbulbRoundedIcon color="primary" />
         <Box>
