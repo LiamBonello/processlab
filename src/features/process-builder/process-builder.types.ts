@@ -8,11 +8,18 @@ export interface ProcessNodeData extends Record<string, unknown> {
   workers: number;
   hourlyCost: number;
   isBottleneck?: boolean;
+  simulation?: {
+    visits: number;
+    averageQueueMinutes: number;
+    workloadRatio: number;
+  };
 }
 
 export interface ProcessEdgeData extends Record<string, unknown> {
   probability?: number;
+  simulationVisits?: number;
+  isPlaying?: boolean;
 }
 
 export type ProcessFlowNode = Node<ProcessNodeData, 'process'>;
-export type ProcessFlowEdge = Edge<ProcessEdgeData, 'default'>;
+export type ProcessFlowEdge = Edge<ProcessEdgeData, 'simulation'>;
