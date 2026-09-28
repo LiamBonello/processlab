@@ -54,7 +54,7 @@ export function ScenarioPanel({
         </Typography>
       </Box>
 
-      <Stack spacing={1} mt={2}>
+      <Stack spacing={1} sx={{ mt: 2 }}>
         {scenarios.map((scenario) => (
           <Box
             key={scenario.id}
@@ -73,7 +73,7 @@ export function ScenarioPanel({
             })}
           >
             <Box>
-              <Typography fontWeight={700}>{scenario.name}</Typography>
+              <Typography sx={{ fontWeight: 700 }}>{scenario.name}</Typography>
               <Typography variant="caption" color="text.secondary">
                 {scenario.monthlyVolume.toLocaleString()} / month ·{' '}
                 {new Date(scenario.createdAt).toLocaleString()}
@@ -141,7 +141,7 @@ export function ScenarioPanel({
               </Typography>
             </Box>
 
-            <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+            <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end' }}>
               <Button
                 size="small"
                 startIcon={<FlagRoundedIcon />}
