@@ -1,4 +1,5 @@
 import type { SimulationResult } from './engine/types';
+import { formatSimulationDuration } from './format';
 
 export type InsightSeverity = 'critical' | 'warning' | 'opportunity' | 'info';
 
@@ -96,7 +97,7 @@ export function buildSimulationInsights(
       id: 'queue-delay',
       severity: highestQueue.averageQueueMinutes >= 60 ? 'critical' : 'warning',
       title: `Queueing is concentrated at ${highestQueue.label}`,
-      description: `Transactions wait an average of ${highestQueue.averageQueueMinutes.toFixed(1)} minutes before processing at this step.`,
+      description: `Transactions wait an average of ${formatSimulationDuration(highestQueue.averageQueueMinutes)} before processing at this step.`,
     });
   }
 
