@@ -30,7 +30,7 @@ export function InsightsPanel({
 }) {
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
-      <Stack direction="row" spacing={1} alignItems="center">
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
         <LightbulbRoundedIcon color="primary" />
         <Box>
           <Typography variant="h6">Process insights</Typography>
@@ -40,7 +40,7 @@ export function InsightsPanel({
         </Box>
       </Stack>
 
-      <Stack spacing={1.25} mt={2}>
+      <Stack spacing={1.25} sx={{ mt: 2 }}>
         {insights.map((insight) => (
           <Alert
             key={insight.id}
