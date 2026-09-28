@@ -40,6 +40,31 @@ export interface RouteSimulationMetric {
   probability?: number;
 }
 
+export type SimulationTraceEventKind =
+  | 'arrive'
+  | 'queue'
+  | 'start'
+  | 'finish'
+  | 'route'
+  | 'complete';
+
+export interface SimulationTraceEvent {
+  at: number;
+  transactionId: number;
+  kind: SimulationTraceEventKind;
+  stepId: string;
+  fromStepId?: string;
+  toStepId?: string;
+  queueMinutes?: number;
+}
+
+export interface SimulationTrace {
+  sampledTransactionIds: number[];
+  events: SimulationTraceEvent[];
+  startAt: number;
+  endAt: number;
+}
+
 export interface SimulationResult {
   transactions: number;
   completedTransactions: number;
@@ -53,4 +78,5 @@ export interface SimulationResult {
   bottleneckLabel: string | null;
   taskMetrics: TaskSimulationMetric[];
   routeMetrics: RouteSimulationMetric[];
+  trace: SimulationTrace;
 }
