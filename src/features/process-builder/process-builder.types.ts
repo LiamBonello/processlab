@@ -13,12 +13,19 @@ export interface ProcessNodeData extends Record<string, unknown> {
     averageQueueMinutes: number;
     workloadRatio: number;
   };
+  playback?: {
+    queued: number;
+    processing: number;
+    traversed: number;
+    completed: number;
+  };
 }
 
 export interface ProcessEdgeData extends Record<string, unknown> {
   probability?: number;
   simulationVisits?: number;
-  isPlaying?: boolean;
+  activeTraceIds?: string[];
+  playbackSpeed?: number;
 }
 
 export type ProcessFlowNode = Node<ProcessNodeData, 'process'>;
