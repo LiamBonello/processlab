@@ -96,6 +96,18 @@ function assertPositiveFinite(value: number, label: string) {
   }
 }
 
+function sampleDuration(
+  baseMinutes: number,
+  variabilityPercent: number,
+  random: () => number,
+) {
+  if (variabilityPercent <= 0) return baseMinutes;
+
+  const variability = variabilityPercent / 100;
+  const triangularOffset = random() + random() - 1;
+  return Math.max(0.1, baseMinutes * (1 + triangularOffset * variability));
+}
+
 function validateProcess(
   steps: ProcessStep[],
   connections: ProcessConnection[],
@@ -127,6 +139,7 @@ function validateProcess(
       const durationMinutes = step.durationMinutes ?? 0;
       const workers = step.workers ?? 0;
       const hourlyCost = step.hourlyCost ?? Number.NaN;
+      const variabilityPercent = step.variabilityPercent ?? 0;
 
       assertPositiveFinite(durationMinutes, `${step.label} duration`);
       assertPositiveFinite(workers, `${step.label} workers`);
@@ -136,6 +149,13 @@ function validateProcess(
       }
       if (!Number.isFinite(hourlyCost) || hourlyCost < 0) {
         throw new Error(`${step.label} hourly cost cannot be negative.`);
+      }
+      if (
+        !Number.isFinite(variabilityPercent) ||
+        variabilityPercent < 0 ||
+        variabilityPercent > 100
+      ) {
+        throw new Error(`${step.label} variability must be between 0% and 100%.`);
       }
     }
   }
@@ -392,7 +412,12 @@ export function simulateProcess(
       if (workers[index] < workers[workerIndex]) workerIndex = index;
     }
 
-    const durationMinutes = step.durationMinutes ?? 0;
+    const baseDurationMinutes = step.durationMinutes ?? 0;
+    const durationMinutes = sampleDuration(
+      baseDurationMinutes,
+      step.variabilityPercent ?? 0,
+      random,
+    );
     const hourlyCost = step.hourlyCost ?? 0;
     const startsAt = Math.max(event.at, workers[workerIndex]);
     const queueMinutes = startsAt - event.at;
