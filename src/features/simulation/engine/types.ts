@@ -33,6 +33,13 @@ export interface TaskSimulationMetric {
   processingCost: number;
 }
 
+export interface RouteSimulationMetric {
+  source: string;
+  target: string;
+  visits: number;
+  probability?: number;
+}
+
 export interface SimulationResult {
   transactions: number;
   completedTransactions: number;
@@ -45,4 +52,5 @@ export interface SimulationResult {
   bottleneckTaskId: string | null;
   bottleneckLabel: string | null;
   taskMetrics: TaskSimulationMetric[];
+  routeMetrics: RouteSimulationMetric[];
 }
