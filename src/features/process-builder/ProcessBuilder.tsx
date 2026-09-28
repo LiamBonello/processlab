@@ -683,7 +683,7 @@ export function ProcessBuilder() {
             <Stack direction="row" alignItems="center" spacing={1}>
               <ScienceRoundedIcon color="primary" />
               <Typography variant="h4">ProcessLab</Typography>
-              <Chip size="small" label="v0.2" variant="outlined" />
+              <Chip size="small" label="v0.3" variant="outlined" />
             </Stack>
             <Typography color="text.secondary" mt={0.5}>
               Build the process, run the numbers, find the bottleneck.
