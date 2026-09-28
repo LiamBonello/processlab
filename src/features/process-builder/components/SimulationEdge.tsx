@@ -81,9 +81,9 @@ export function SimulationEdge({
               whiteSpace: 'nowrap',
             })}
           >
-            <Stack direction="row" spacing={0.65} alignItems="center">
+            <Stack direction="row" spacing={0.65} sx={{ alignItems: 'center' }}>
               {probability !== undefined ? (
-                <Typography variant="caption" fontWeight={750} color="secondary.main">
+                <Typography variant="caption" color="secondary.main" sx={{ fontWeight: 750 }}>
                   {Math.round(probability * 100)}%
                 </Typography>
               ) : null}
