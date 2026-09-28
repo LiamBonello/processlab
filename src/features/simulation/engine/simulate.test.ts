@@ -45,6 +45,19 @@ describe('simulateProcess', () => {
     expect(approvalRoute?.visits).toBeGreaterThan(0);
     expect(directRoute?.visits).toBeGreaterThan(0);
     expect((approvalRoute?.visits ?? 0) + (directRoute?.visits ?? 0)).toBe(800);
+
+    expect(result.trace.sampledTransactionIds.length).toBeLessThanOrEqual(24);
+    expect(result.trace.sampledTransactionIds.length).toBeGreaterThan(0);
+    expect(result.trace.events.some((event) => event.kind === 'arrive')).toBe(true);
+    expect(result.trace.events.some((event) => event.kind === 'start')).toBe(true);
+    expect(result.trace.events.some((event) => event.kind === 'route')).toBe(true);
+    expect(result.trace.events.some((event) => event.kind === 'complete')).toBe(true);
+
+    for (let index = 1; index < result.trace.events.length; index += 1) {
+      expect(result.trace.events[index].at).toBeGreaterThanOrEqual(
+        result.trace.events[index - 1].at,
+      );
+    }
   });
 
   it('reports backlog when a task is overloaded', () => {
