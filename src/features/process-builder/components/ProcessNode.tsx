@@ -5,7 +5,7 @@ import CallSplitRoundedIcon from '@mui/icons-material/CallSplitRounded';
 import FlagRoundedIcon from '@mui/icons-material/FlagRounded';
 import GroupsRoundedIcon from '@mui/icons-material/GroupsRounded';
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
-import { Box, Chip, Stack, Typography, alpha } from '@mui/material';
+import { Box, Chip, LinearProgress, Stack, Typography, alpha } from '@mui/material';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { ProcessFlowNode } from '../process-builder.types';
 
@@ -82,16 +82,49 @@ export function ProcessNode({ data, selected }: NodeProps<ProcessFlowNode>) {
       </Stack>
 
       {data.kind === 'task' ? (
-        <Stack direction="row" spacing={1.5} mt={1.1} color="text.secondary">
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            <AccessTimeRoundedIcon sx={{ fontSize: 15 }} />
-            <Typography variant="caption">{data.durationMinutes} min</Typography>
+        <>
+          <Stack direction="row" spacing={1.5} mt={1.1} color="text.secondary">
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <AccessTimeRoundedIcon sx={{ fontSize: 15 }} />
+              <Typography variant="caption">{data.durationMinutes} min</Typography>
+            </Stack>
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <GroupsRoundedIcon sx={{ fontSize: 15 }} />
+              <Typography variant="caption">{data.workers}</Typography>
+            </Stack>
           </Stack>
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            <GroupsRoundedIcon sx={{ fontSize: 15 }} />
-            <Typography variant="caption">{data.workers}</Typography>
-          </Stack>
-        </Stack>
+
+          {data.simulation ? (
+            <Box mt={1.15}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" mb={0.55}>
+                <Typography variant="caption" color="text.secondary">
+                  {data.simulation.visits.toLocaleString()} visits
+                </Typography>
+                <Typography
+                  variant="caption"
+                  color={data.simulation.workloadRatio > 1 ? 'error.main' : 'text.secondary'}
+                >
+                  {Math.round(data.simulation.workloadRatio * 100)}% load
+                </Typography>
+              </Stack>
+              <LinearProgress
+                variant="determinate"
+                value={Math.min(100, data.simulation.workloadRatio * 100)}
+                color={
+                  data.simulation.workloadRatio > 1
+                    ? 'error'
+                    : data.simulation.workloadRatio >= 0.8
+                      ? 'warning'
+                      : 'primary'
+                }
+                sx={{ height: 4, borderRadius: 999 }}
+              />
+              <Typography variant="caption" color="text.secondary" display="block" mt={0.45}>
+                Avg queue {data.simulation.averageQueueMinutes.toFixed(1)} min
+              </Typography>
+            </Box>
+          ) : null}
+        </>
       ) : data.kind === 'decision' ? (
         <Typography variant="caption" color="text.secondary" display="block" mt={1}>
           Routes work by probability
