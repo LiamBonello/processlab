@@ -1,6 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from 'react';
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
 import CallSplitRoundedIcon from '@mui/icons-material/CallSplitRounded';
@@ -512,6 +519,183 @@ export function ProcessBuilder() {
       ),
     );
   }, [setNodes]);
+
+  const applyTemplate = useCallback(
+    (template: ProcessTemplate) => {
+      const cloned = cloneTemplate(template);
+      setProjectName(template.name);
+      setNodes(cloned.nodes);
+      setEdges(cloned.edges);
+      setMonthlyVolume(cloned.monthlyVolume);
+      setWorkdaysPerMonth(cloned.workdaysPerMonth);
+      setHoursPerDay(cloned.hoursPerDay);
+      setSavedScenarios([]);
+      setBaseline(null);
+      setResult(null);
+      setStressTestResult(null);
+      setSimulationError(null);
+      setSelectedNodeId(null);
+      setSelectedEdgeId(null);
+      playbackProgressRef.current = 0;
+      setPlaybackProgress(0);
+      setPlaybackStatus('idle');
+      setTemplateDialogOpen(false);
+    },
+    [setEdges, setNodes],
+  );
+
+  const exportWorkspace = useCallback(() => {
+    const workspace = createWorkspace(
+      projectName.trim() || 'Untitled process',
+      nodes,
+      edges,
+      monthlyVolume,
+      workdaysPerMonth,
+      hoursPerDay,
+      savedScenarios,
+    );
+    const blob = new Blob([JSON.stringify(workspace, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const safeName = (projectName.trim() || 'processlab-project')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    link.href = url;
+    link.download = (safeName || 'processlab-project') + '.processlab.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [
+    edges,
+    hoursPerDay,
+    monthlyVolume,
+    nodes,
+    projectName,
+    savedScenarios,
+    workdaysPerMonth,
+  ]);
+
+  const importWorkspace = useCallback(
+    async (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.currentTarget.files?.[0];
+      event.currentTarget.value = '';
+      if (!file) return;
+
+      const workspace = parseWorkspace(await file.text());
+      if (!workspace) {
+        setSimulationError('This file is not a valid ProcessLab project backup.');
+        return;
+      }
+
+      setProjectName(workspace.projectName);
+      setNodes(
+        workspace.nodes.map((node) => ({
+          ...node,
+          type: 'process' as const,
+          data: {
+            ...node.data,
+            variabilityPercent: node.data.variabilityPercent ?? 0,
+            isBottleneck: false,
+            simulation: undefined,
+            playback: undefined,
+          },
+        })),
+      );
+      setEdges(
+        workspace.edges.map((edge) => ({
+          ...edge,
+          type: 'simulation' as const,
+          data: { probability: edge.data?.probability },
+        })),
+      );
+      setMonthlyVolume(workspace.monthlyVolume);
+      setWorkdaysPerMonth(workspace.workdaysPerMonth);
+      setHoursPerDay(workspace.hoursPerDay);
+      setSavedScenarios(workspace.savedScenarios);
+      setBaseline(null);
+      setResult(null);
+      setStressTestResult(null);
+      setSimulationError(null);
+      setSelectedNodeId(null);
+      setSelectedEdgeId(null);
+      playbackProgressRef.current = 0;
+      setPlaybackProgress(0);
+      setPlaybackStatus('idle');
+    },
+    [setEdges, setNodes],
+  );
+
+  const saveScenario = useCallback(() => {
+    if (!result) return;
+
+    const name =
+      scenarioName.trim() || 'Scenario ' + (savedScenarios.length + 1);
+    const scenario: ScenarioSnapshot = {
+      id: crypto.randomUUID(),
+      name,
+      createdAt: new Date().toISOString(),
+      monthlyVolume,
+      workdaysPerMonth,
+      hoursPerDay,
+      result,
+    };
+
+    setSavedScenarios((current) => [...current, scenario]);
+    setScenarioDialogOpen(false);
+    setScenarioName('Scenario ' + (savedScenarios.length + 2));
+  }, [
+    hoursPerDay,
+    monthlyVolume,
+    result,
+    savedScenarios.length,
+    scenarioName,
+    workdaysPerMonth,
+  ]);
+
+  const runStressTest = useCallback(() => {
+    try {
+      const nextStressTest = runVolumeStressTest(
+        simulationSteps,
+        simulationConnections,
+        {
+          monthlyVolume,
+          workdaysPerMonth,
+          hoursPerDay,
+          seed: 20260928,
+        },
+      );
+      setStressTestResult(nextStressTest);
+      setSimulationError(null);
+    } catch (error) {
+      setStressTestResult(null);
+      setSimulationError(
+        error instanceof Error ? error.message : 'Unable to run the stress test.',
+      );
+    }
+  }, [
+    hoursPerDay,
+    monthlyVolume,
+    simulationConnections,
+    simulationSteps,
+    workdaysPerMonth,
+  ]);
+
+  const deleteScenario = useCallback((scenarioId: string) => {
+    setSavedScenarios((current) =>
+      current.filter((scenario) => scenario.id !== scenarioId),
+    );
+  }, []);
+
+  const useScenarioAsBaseline = useCallback((scenario: ScenarioSnapshot) => {
+    setBaseline(scenario.result);
+  }, []);
+
+  const printReport = useCallback(() => {
+    window.print();
+  }, []);
 
   const onConnect = useCallback(
     (connection: Connection) => {
